@@ -1,0 +1,41 @@
+apiVersion: oadp.openshift.io/v1alpha1
+kind: DataProtectionApplication
+metadata:
+  name: velero
+  namespace: open-cluster-management-backup
+spec:
+  configuration:
+    restic:
+      enable: true
+    velero:
+      defaultPlugins:
+        - openshift
+        - aws
+        - kubevirt
+  snapshotLocations:
+    - velero:
+        config:
+          profile: default
+          region: us-east-2
+        provider: aws
+  backupLocations:
+    - velero:
+        config:
+          profile: default
+          region: us-east-2
+        credential:
+          key: cloud
+          name: cloud-credentials
+        objectStorage:
+          bucket: rhacm-dr-test-mmw
+          prefix: velero
+        default: true
+        provider: aws
+        podConfig:
+          resourceAllocations:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+            requests:
+              cpu: 500m
+              memory: 256Mi

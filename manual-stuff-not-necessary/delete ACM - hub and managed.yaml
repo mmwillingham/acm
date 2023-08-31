@@ -1,0 +1,65 @@
+##############
+# TO DELETE ACM FROM MANAGED CLUSTER
+- ACM console > detach managed cluster (wait until it's complete before proceeding)
+or
+<insert CLI>
+# Run this on the client to remove the client components
+# ACM client removal script
+curl https://raw.githubusercontent.com/stolostron/deploy/master/hack/cleanup-managed-cluster.sh > /var/tmp/acmclientremoval.sh
+. /var/tmp/acmclientremoval.sh
+oc delete apiservice v1.work.open-cluster-management.io v1alpha1.cluster.open-cluster-management.io
+
+# TO DELETE ACM FROM HUB CLUSTER
+ACM_NAMESPACE=open-cluster-management
+oc project $ACM_NAMESPACE
+oc delete mco observability
+oc delete multiclusterhub --all
+oc get mch -o yaml
+
+# if trouble deleting the mch - if cursor never returned after saying deleted -open a new terminal:
+oc patch crd/multiclusterhubs.operator.open-cluster-management.io -p '{"metadata":{"finalizers":[]}}' --type=merge
+oc delete multiclusterhubs.operator.open-cluster-management.io -n open-cluster-management multiclusterhub
+oc get multiclusterhubs.operator.open-cluster-management.io -n open-cluster-management multiclusterhub
+
+oc get clusterroles | grep open-cluster-management | wc -l
+# if more than 0:
+oc get clusterroles | grep open-cluster-management | awk {'print $1'} | while read i; do oc delete clusterroles $i; done
+oc get clusterroles | grep open-cluster-management | wc -l
+# should be 0. If not, keep running until there are 0 # These might be re-created by something
+oc get clusterroles | grep open-cluster-management | awk {'print $1'} | while read i; do oc delete clusterroles $i; done
+
+oc get subscription -n openshift-operators
+oc delete subscription -n openshift-operators acm-operator-subscription # Not sure if this is correct
+oc get csv -n open-cluster-management 
+oc delete csv -n open-cluster-management advanced-cluster-management.v2.6.4
+oc delete project open-cluster-management
+oc delete clusterrole klusterlet
+oc delete clusterrole open-cluster-management:klusterlet-admin-aggregate-clusterrole
+oc delete clusterrolebinding klusterlet
+
+#!/bin/bash
+# Don't do the ones for namespaces if namespace is already gone
+ACM_NAMESPACE=open-cluster-management
+oc project $ACM_NAMESPACE
+oc delete mch --all -n $ACM_NAMESPACE # e.g. open-cluster-management
+helm ls --namespace $ACM_NAMESPACE | cut -f 1 | tail -n +2 | xargs -n 1 helm delete --namespace $ACM_NAMESPACE
+oc delete apiservice v1beta2.webhook.certmanager.k8s.io v1.admission.cluster.open-cluster-management.io v1.admission.work.open-cluster-management.io
+oc delete clusterimageset --all
+oc delete clusterrole multiclusterengines.multicluster.openshift.io-v1-admin multiclusterengines.multicluster.openshift.io-v1-crdview multiclusterengines.multicluster.openshift.io-v1-edit multiclusterengines.multicluster.openshift.io-v1-view
+oc delete configmap -n $ACM_NAMESPACE cert-manager-controller cert-manager-cainjector-leader-election cert-manager-cainjector-leader-election-core
+oc delete consolelink acm-console-link
+oc delete crd klusterletaddonconfigs.agent.open-cluster-management.io placementbindings.policy.open-cluster-management.io policies.policy.open-cluster-management.io userpreferences.console.open-cluster-management.io searchservices.search.acm.com discoveredclusters.discovery.open-cluster-management.io discoveryconfigs.discovery.open-cluster-management.io
+oc delete mutatingwebhookconfiguration cert-manager-webhook cert-manager-webhook-v1alpha1 ocm-mutating-webhook managedclustermutators.admission.cluster.open-cluster-management.io multicluster-observability-operator
+oc delete oauthclient multicloudingress
+oc delete rolebinding -n kube-system cert-manager-webhook-webhook-authentication-reader
+oc delete scc kui-proxy-scc
+oc delete validatingwebhookconfiguration cert-manager-webhook cert-manager-webhook-v1alpha1 channels.apps.open.cluster.management.webhook.validator application-webhook-validator multiclusterhub-operator-validating-webhook ocm-validating-webhook multicluster-observability-operator multiclusterengines.multicluster.openshift.io
+
+oc get csv
+oc delete clusterserviceversion advanced-cluster-management.v2.4.0 # or whatever is returned from previous step
+oc get sub
+oc delete sub acm-operator-subscription
+
+# On managed cluster
+oc delete clusterrole klusterlet
+oc delete clusterrole open-cluster-management:klusterlet-admin-aggregate-clusterrole

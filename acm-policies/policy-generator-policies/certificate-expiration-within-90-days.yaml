@@ -1,0 +1,12 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: CertificatePolicy
+metadata:
+  name: certificate-expiration-within-90-days
+spec:
+  minimumDuration: 2160h
+  namespaceSelector:
+    exclude: []
+    include:
+      - openshift-console
+      - openshift-ingress
+#      - custom-ingress-domain

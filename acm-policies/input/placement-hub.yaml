@@ -1,0 +1,21 @@
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: hub
+  namespace: acm-policies
+spec:
+  clusterSet: hub
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: policy-placement-hub
+  namespace: acm-policies
+spec:
+  clusterSets:
+    - hub
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - {key: name, operator: In, values: ["local-cluster"]}

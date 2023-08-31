@@ -1,0 +1,314 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policygenerator-config
+
+###############################################
+# Default values
+###############################################
+policyDefaults:
+  namespace: acm-policies
+# copyPolicyMetadata requires >= 2.8 version of the image for policy generator multicluster-operators-subscription in ArgoCD
+# https://git.delta.com/openshift/mt-configs/openshift-gitops-argocd/-/blob/v1.3/templates/argocd.yaml
+  copyPolicyMetadata: false
+  placement:
+    name: "default-placement"
+#    placementRulePath: input/placementrule-default.yaml
+    placementRulePath: input/placement-default.yaml
+placementBindingDefaults:
+  name: default-placement-binding
+
+###############################################
+policySets:
+#  - name: hub
+#    description: Policies to be executed on the RHACM hub cluster
+#    placement:
+#      placementRulePath: input/placement-hub.yaml
+#    policies:
+#      - gatekeeper-install
+#      - gatekeeper-readiness-probe-not-set
+#      - gatekeeper-liveness-probe-not-set
+#      - gatekeeper-latest-tag
+#      - kyverno-require-requests-limits
+#      - kyverno-latest-tag
+#      - kyverno-enforce-resources-as-ratio-memory
+
+#  - name: exclude-specified-clusters
+#    description: Policies to be executed on all except the excluded clusters
+#    placement:
+#      placementRulePath: input/placementrule-exclude-specified-clusters.yaml
+#    policies:
+#      - gatekeeper-install
+#      - gatekeeper-readiness-probe-not-set
+#      - gatekeeper-liveness-probe-not-set
+#      - gatekeeper-latest-tag
+
+  - name: cluster-health
+    description: Policies related to cluster health
+ 
+#  - name: cluster-best-practice
+#    description: Policies related to cluster best practices
+#    policies:
+      # Add custom policies here or in one of the other policySets:
+#      - gatekeeper-install
+#      - gatekeeper-readiness-probe-not-set
+#      - gatekeeper-liveness-probe-not-set
+#      - gatekeeper-latest-tag
+#      - service-account-default-in-use
+#      - service-account-pipeline-abuse
+
+#  - name: placement-named-clusters
+#    description: Policies placed on cluster by name
+#    placement:
+#      placementRulePath: input/placementrule-named-clusters.yaml   
+#    policies:
+#      - kyverno-require-labels
+
+
+###############################################
+policies:
+
+###############################################
+# Cluster Health Policies
+###############################################
+  - name: node-availability
+    manifests:
+      - path: policy-generator-policies/node-availability.yaml
+    remediationAction: "inform"
+    severity: "high"
+    complianceType: "mustnothave"
+    evaluationInterval:
+      compliant: 6h
+      noncompliant: 600s  
+    policySets:
+      - cluster-health
+
+  - name: cluster-operator-health
+    manifests:
+      - path: policy-generator-policies/cluster-operator-health.yaml
+    remediationAction: "inform"
+    severity: "high"
+    complianceType: "mustnothave"
+    policySets:
+      - cluster-health
+
+  - name: namespace-terminating
+    manifests:
+      - path: policy-generator-policies/namespace-terminating.yaml
+    remediationAction: "inform"
+    severity: "low"
+    namespaceSelector:
+      exclude:
+        - "kube-*"
+      include:
+        - "*"
+    complianceType: "mustnothave"
+    policySets:
+      - cluster-health
+
+  - name: certificate-expiration-within-90-days
+    manifests:
+      - path: policy-generator-policies/certificate-expiration-within-90-days.yaml
+    remediationAction: "inform"
+    severity: "high"
+    namespaceSelector:
+      exclude:
+        - "kube-*"
+      include:
+        - "*"
+    complianceType: "mustnothave"
+    policySets:
+      - cluster-health
+
+  - name: pod-terminating
+    manifests:
+      - path: policy-generator-policies/pod-terminating.yaml
+    remediationAction: inform
+    severity: "high"
+    namespaceSelector:
+      include:
+        - "*"
+    complianceType: "mustnothave" # "musthave" or "mustnothave" or "mustonlyhave"
+    policySets:
+      - cluster-health
+
+#  - name: configmaps-exist
+#    manifests:
+#      - path: policy-generator-policies/configmaps-exist
+#    remediationAction: enforce
+#    severity: "low"
+#    complianceType: "musthave" # "musthave" or "mustnothave" or "mustonlyhave"
+#    policySets:
+#      - cluster-health
+
+#  - name: require-labels
+#    manifests:
+#      #- path: policy-generator-policies/labels-compliance
+#      - path: policy-generator-policies/kyverno-require-labels.yaml
+#    remediationAction: inform
+#    severity: "high"
+#    namespaceSelector:
+#      include:
+#        - "sandra-test"
+#    categories:
+#      - "PaaS Internal"
+#    complianceType: "musthave" # "musthave" or "mustnothave" or "mustonlyhave"
+##    policyAnnotations:
+##      test-annotation: test
+#    policySets:
+#      - placement-named-clusters
+#
+#  - name: pod-exists-gitops-controller
+#    manifests:
+#      - path: policy-generator-policies/pod-exists-gitops-controller.yaml
+#    remediationAction: inform
+#    severity: "high"
+#    namespaceSelector:
+#      include:
+#        - "openshift-gitops"
+#    complianceType: "musthave" # "musthave" or "mustnothave" or "mustonlyhave"
+#    policySets:
+#      - cluster-health
+#
+#
+#  - name: sumologic-namespace
+#    manifests:
+#      - path: policy-generator-policies/sumologic-namespace.yaml
+#    remediationAction: inform
+#    severity: "low"
+#    complianceType: "musthave" # "musthave" or "mustnothave" or "mustonlyhave"
+#    policySets:
+#      - cluster-health
+#
+#  - name: business-automation-namespace
+#    manifests:
+#      - path: policy-generator-policies/business-automation-namespace.yaml
+#    remediationAction: inform
+#    severity: "low"
+#    complianceType: "musthave" # "musthave" or "mustnothave" or "mustonlyhave"
+#    policySets:
+#      - cluster-health 
+#
+################################################
+## Cluster best practices policies
+################################################
+#  - name: kubeadmin-exists
+#    manifests:
+#      - path: policy-generator-policies/kubeadmin-exists.yaml
+#    remediationAction: "inform"
+#    severity: "low"
+#    complianceType: "mustnothave"
+#    policySets:
+#      - cluster-best-practice
+#
+#  - name: disallow-self-provisioner
+#    manifests:
+#      - path: policy-generator-policies/disallow-self-provisioner.yaml
+#    remediationAction: "inform"
+#    severity: "low"
+#    namespaceSelector:
+#      exclude:
+#        - "kube-*"
+#      include:
+#        - "*"
+#    complianceType: "mustnothave"
+#    policySets:
+#      - cluster-best-practice
+#
+#  - name: etcd-encryption
+#    manifests:
+#      - path: policy-generator-policies/etcd-encryption.yaml
+#    remediationAction: "inform"
+#    severity: "low"
+#    complianceType: "musthave"
+#    policySets:
+#      - cluster-best-practice
+#
+#  - name: limit-cluster-admin-rolebindings
+#    manifests:
+#      - path: policy-generator-policies/limitclusteradmin.yaml
+#    remediationAction: "inform"
+#    severity: "low"
+#    namespaceSelector:
+#      exclude:
+#        - "kube-*"
+#      include:
+#        - "*"
+#    complianceType: "mustnothave"
+#    policySets:
+#      - cluster-best-practice
+#
+#  - name: roles-with-full-access
+#    manifests:
+#      - path: policy-generator-policies/rbac
+#    remediationAction: "inform"
+#    severity: "high"
+#    namespaceSelector:
+#      exclude:
+#        - "openshift-*"
+#      include:
+#        - "*"
+#    complianceType: "mustnothave"
+#    policySets:
+#      - cluster-best-practice
+#
+#
+################################################
+## Hub policies
+################################################
+  # NOTE for web-terminal. If installing on CRC, you may get an error in the operator and in DevWorkspaces (which was automatically installed). If so, follow this tech note
+  # https://access.redhat.com/solutions/6992396
+  # oc edit crd devworkspaces.workspace.devfile.io
+  # FROM
+  #   conversion:
+  #   strategy: Webhook                                  //Change Webhook to None
+  #   webhook:                                           //Remove these lines below strategy
+  #     clientConfig:
+  #       caBundle: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  #       service:
+  #         name: devworkspace-controller-manager-service
+  #         namespace: openshift-operators
+  #         path: /convert
+  #         port: 443
+  #     conversionReviewVersions:
+  #     - v1
+
+  # TO
+  #   spec:
+  #   conversion:
+  #     strategy: None
+
+  # Then uninstall DevWorkspaces operator and reinstall
+
+  - name: web-terminal
+    manifests:
+      - path: policy-generator-policies/web-terminal.yaml
+    remediationAction: "enforce"
+    severity: "low"
+    complianceType: "musthave"
+    policySets:
+#      - hub
+      - cluster-health
+#
+#  - name: discovery-config
+#    manifests:
+#      - path: policy-generator-policies/discovery-config.yaml
+#    remediationAction: "enforce"
+#    severity: "high"
+#    complianceType: "musthave"
+#    policySets:
+#      - hub
+#
+##################################################
+## Patching
+##################################################
+## Disabling this until I can find why the changes are being overwritten
+##  - name: rhacm-config-policy-controller-limits
+##    manifests:
+##      - path: policy-generator-policies/rhacm-config-policy-controller-limits.yaml
+##    remediationAction: "enforce"
+##    severity: "high"
+##    complianceType: "musthave"
+##    policySets:
+##      - hub
+#

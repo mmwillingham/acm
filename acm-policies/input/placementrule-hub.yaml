@@ -1,0 +1,21 @@
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: placement-hub
+  namespace: acm-policies
+spec:
+  clusterConditions:
+    - status: "True"
+      type: ManagedClusterConditionAvailable
+  clusterSelector:
+    matchExpressions:
+#      - key: vendor
+#        operator: In
+#        values:
+#          - OpenShift
+#
+#  Use this one permanently
+      - key: cluster.open-cluster-management.io/clusterset
+        operator: In
+        values:
+          - hub
