@@ -284,7 +284,7 @@ oc get managedclustersets -n open-cluster-management
 ### NOTE on Managed Clusters:
 ### Clusters created by ACM will be automatically imported (because it has a copy of kubeconfig).
 ### Clusters imported into ACM will be listed as Pending Import and must be re-imported.
-### HOWEVER, read this on ManagedServiceAccount
+### HOWEVER, there is a new feature to import automatically using a ManagedServiceAccount - which I will use below
 #### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/business_continuity/index#auto-connect-clusters-msa
 #### https://github.com/stolostron/cluster-backup-operator/tree/main#automatically-connecting-clusters-using-managedserviceaccount---tech-preview
 
@@ -296,7 +296,8 @@ oc apply -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
 ```
 ### View restore events
 ```bash
-oc describe Restore.cluster.open-cluster-management.io -n open-cluster-management-backup <restore-name>
+oc get restore -n open-cluster-management-backup
+oc describe -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name)
 ```
 
 ## Verify test-dr clusterset exists

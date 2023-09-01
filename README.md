@@ -4,15 +4,15 @@
 ```bash
 mkdir ~/git
 cd ~/git
-git clone https://github.com/mmwillingham/acm-acs.git
-cd acm-acs
+git clone https://github.com/mmwillingham/acm.git
+cd acm
 ```
 ## To install ACM on hub cluster
 ## (Check version of ACM in subscription within the file installhub.sh)
 ```bash
 . install-acm/installhub.sh
 ```
-## Create clusterset for hub
+## Create clusterset for hub & managed
 ```bash
 oc apply -f install-acm/create-clusterset-hub.yaml
 ```
