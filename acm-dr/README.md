@@ -20,6 +20,10 @@ oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json 
 oc get csv -n open-cluster-management-backup |grep OADP
 # Wait until succeeded
 ```
+## Enable managedserviceaccount-preview
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+```
 
 ## Download aws cli
 ### https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
@@ -159,10 +163,6 @@ cp credentials-velero credentials-velero.backup
 ```bash
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
-## Enable managedserviceaccount-preview
-```bash
-oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
-```
 
 ## Create DataProtectionApplication CR
 ```bash
@@ -230,9 +230,11 @@ oc get schedules -n open-cluster-management-backup
 oc describe BackupSchedule -n open-cluster-management-backup
 oc get backup -n open-cluster-management-backup
 # View "Items Backed Up" by one of the backups (this backup includes ACM stuff)
-oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) | grep -A9 "Status:"
+oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) | grep "Phase:"
+oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | head -1) | grep -A9 "Status:"
+oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | head -1) | grep "Phase:"
 # View contents of s3 bucket after backup
-aws s3api list-objects --bucket rhacm-dr-test-mmw --output table
+aws s3api list-objects --bucket rhacm-dr-failover-test-mmw --output table
 ```
 
 ## As a test, create an object on active hub to be restored
