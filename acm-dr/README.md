@@ -159,11 +159,15 @@ cp credentials-velero credentials-velero.backup
 ```bash
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
+## Enable managedserviceaccount-preview
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+```
 
 ## Create DataProtectionApplication CR
 ```bash
 # Change name in dpa.yaml to bucket specified above
-oc apply -f acm-dr/dpa.yaml
+oc create -f acm-dr/dpa.yaml
 ```
 
 ### Verify success

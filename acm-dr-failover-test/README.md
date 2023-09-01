@@ -42,8 +42,10 @@ oc new-project aws-cred
 ```
 Install OADP Operator
 Create bucket and access to it
-    BUCKET=rhacm-dr-failover-test-mmw
+  BUCKET=rhacm-dr-failover-test-mmw
+Enable managedserviceaccount-preview
 Create DataProtectionApplication CR
+  # Change name in dpa.yaml to bucket specified above
 Schedule a backup on active cluster
   oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
 Verify
