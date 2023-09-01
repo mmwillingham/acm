@@ -18,6 +18,7 @@
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 oc get csv -n open-cluster-management-backup |grep OADP
+# Wait until succeeded
 ```
 
 ## Download aws cli
@@ -113,13 +114,13 @@ echo $AWS_ACCESS_KEY_ID
 ```bash
 aws iam list-access-keys --user-name velero
 ```
-### If you have an issue, you can delete the access key and recreate showing the full output:
+#### If you have an issue, you can delete the access key and recreate showing the full output:
 ```bash
 aws iam list-access-keys --user-name velero
 aws iam delete-access-keys --access-key-id <ACCESS KEY ID> --user-name velero
 aws iam create-access-key --user-name velero
 ```
-### Example output
+#### Example output
 ```
 {
   "AccessKey": {
@@ -131,7 +132,7 @@ aws iam create-access-key --user-name velero
   }
 }
 ```
-### Actual
+#### Actual
 ```
 {
     "AccessKey": {
@@ -144,28 +145,30 @@ aws iam create-access-key --user-name velero
 }
 ```
 ### Create a credentials-velero file: 
-### NOTE: looks like this file gets deleted after used to create secret. You will need the values when configuring the passive cluster.
 ```bash
 cat << EOF > ./credentials-velero
 [default]
 aws_access_key_id=$AWS_ACCESS_KEY_ID
 aws_secret_access_key=$AWS_SECRET_ACCESS_KEY
 EOF
+# backup credentials file in lab environment
+cp credentials-velero credentials-velero.backup
 ```
 
-### Create a Secret with the default name:
+## Create a Secret with the default name:
 ```bash
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
 
-### Create DataProtectionApplication CR
+## Create DataProtectionApplication CR
 ```bash
+# Change name in dpa.yaml to bucket specified above
 oc apply -f acm-dr/dpa.yaml
 ```
 
 ### Verify success
 ```bash
-oc get all -n open-cluster-management-backup
+watch oc get all -n open-cluster-management-backup
 ```
 ### Output should be similar
 ```
@@ -203,16 +206,18 @@ replicaset.apps/cluster-backup-chart-clusterbackup-5f7568884   2         2      
 replicaset.apps/openshift-adp-controller-manager-544985898c    1         1         1       89m
 replicaset.apps/velero-759f578c65                              1         1         1       3m13s
 ```
-## Verify ACM policy was created and it compliant
-```bash
-oc get policy -n open-cluster-management-backup
-```
 
 ## Schedule a backup on active cluster
 ```bash
 oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
 ```
-## Verify
+
+### Verify ACM policy was created and it compliant
+```bash
+oc get policy -n open-cluster-management-backup
+```
+
+### Verify
 ```bash
 oc get backupStorageLocations -n open-cluster-management-backup
 oc describe -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name)
@@ -245,13 +250,13 @@ TODO commands
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 oc get csv -n open-cluster-management-backup |grep OADP
 ```
-### Create a Secret with the default name:
+## Create a Secret with the default name
 ### Note: you will need to create the same file that was created above
 ```bash
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
 
-### Create DataProtectionApplication CR
+## Create DataProtectionApplication CR
 ```bash
 oc apply -f acm-dr/dpa.yaml
 ```
@@ -261,12 +266,12 @@ oc apply -f acm-dr/dpa.yaml
 oc get all -n open-cluster-management-backup
 ```
 
-## Verify ACM policy was created and it compliant
+### Verify ACM policy was created and it compliant
 ```bash
 oc get policy -n open-cluster-management-backup
 ```
 
-## Restore on passive cluster. 
+## Restore on passive cluster
 ### Read the possible collision issues here:
 ### https://github.com/stolostron/cluster-backup-operator#backup-collisions
 ### Restore and keep synced

@@ -22,6 +22,7 @@ oc get managedclusterset
 ## Assign new clusterset to hub cluster
 ```bash
 oc label --overwrite managedclusters.cluster.open-cluster-management.io local-cluster cluster.open-cluster-management.io/clusterset=hub
+oc get managedclusterset
 ```
 
 ## Add kubeadmin (and other desired users) to subscription-admin cluster-role-binding

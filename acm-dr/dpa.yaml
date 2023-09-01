@@ -27,7 +27,7 @@ spec:
           key: cloud
           name: cloud-credentials
         objectStorage:
-          bucket: rhacm-dr-test-mmw
+          bucket: rhacm-dr-failover-test-mmw
           prefix: velero
         default: true
         provider: aws
