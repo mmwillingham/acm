@@ -11,18 +11,37 @@
 
 ### Assumes ACM is installed on both primary and backup clusters - IN THE SAME NAMESPACES
 ### All operators installed on primary must also be installed on passive cluster
-#### example: Ansible Automation Platform, Red Hat OpenShift GitOps, cert-manager
+#### example: Ansible Automation Platform, Red Hat OpenShift GitOps, cert-manager, etc
 
 # ACTIVE CLUSTER
 ## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
-oc get csv -n open-cluster-management-backup |grep OADP
 # Wait until succeeded
+echo "Waiting until ready (Succeeded)..."
+status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+  oc get csv -n open-cluster-management-backup | grep OADP
+expected_condition="Succeeded"
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
 ```
 ## Enable managedserviceaccount-preview
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# Verify it is set to true
+oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
 ```
 
 ## Download aws cli
@@ -168,11 +187,29 @@ oc create secret generic cloud-credentials -n open-cluster-management-backup --f
 ```bash
 # Change name in dpa.yaml to bucket specified above
 oc create -f acm-dr/dpa.yaml
+# Wait until complete
+echo "Waiting until complete..."
+status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
+expected_condition=True
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
 ```
 
 ### Verify success
 ```bash
-watch oc get all -n open-cluster-management-backup
+oc get all -n open-cluster-management-backup
 ```
 ### Output should be similar
 ```
@@ -254,17 +291,60 @@ TODO commands
 ## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
-oc get csv -n open-cluster-management-backup |grep OADP
+# Wait until succeeded
+echo "Waiting until ready (Succeeded)..."
+status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+  oc get csv -n open-cluster-management-backup | grep OADP
+expected_condition="Succeeded"
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
 ```
+## Enable managedserviceaccount-preview
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# Verify it is set to true
+oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+```
+
 ## Create a Secret with the default name
 ### Note: you will need to create the same file that was created above
 ```bash
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
 
-## Create DataProtectionApplication CR
+# Wait until complete
 ```bash
-oc apply -f acm-dr/dpa.yaml
+# Change name in dpa.yaml to bucket specified above
+oc create -f acm-dr/dpa.yaml
+echo "Waiting until complete..."
+status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
+expected_condition=True
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
 ```
 
 ### Verify success
