@@ -187,9 +187,8 @@ echo "Waiting until complete..."
 output() {
     oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
 }
-#status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
-status=$(oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled)
-expected_condition=true
+status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
+expected_condition=True
 timeout="300"
 i=1
 until [ "$status" = "$expected_condition" ]
@@ -340,6 +339,8 @@ echo "OK to proceed"
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
 oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+status=$(oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled)
+
 ```
 
 ## Create a Secret with the default name
