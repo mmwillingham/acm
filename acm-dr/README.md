@@ -19,8 +19,11 @@
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
 echo "Waiting until ready (Succeeded)..."
+output() {
+    oc get csv -n open-cluster-management-backup | grep OADP
+}
 status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-  oc get csv -n open-cluster-management-backup | grep OADP
+  output
 expected_condition="Succeeded"
 timeout="300"
 i=1
@@ -37,7 +40,7 @@ do
 done
 echo "OK to proceed"
 ```
-## Enable managedserviceaccount-preview
+## Enable ability to import clusters on restore
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
@@ -50,7 +53,7 @@ oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 sudo ./aws/install
-# Test
+# Verify
 aws --version
 ```
 
@@ -58,10 +61,12 @@ aws --version
 ### Set the BUCKET variable:
 ```bash
 BUCKET=rhacm-dr-test-mmw
+# Specify same name in dpa.yaml
 ```
 ### Set the REGION variable:
 ```bash
 REGION=us-east-2
+# Specify same region in dpa.yaml
 ```
 ### Create an AWS S3 bucket:
 ```bash
@@ -120,11 +125,11 @@ cat > velero-policy.json <<EOF
 EOF
 ```
 
-### Attach the policies to give the velero user the minimum necessary permissions:
+### Attach the policies to give the velero user the minimum necessary permissions
 ```bash
 aws iam put-user-policy --user-name velero --policy-name velero --policy-document file://velero-policy.json
 ```
-### Create an access key for the velero user:
+### Create an access key for the velero user
 ```bash
 # NOTE. The first command creates the access key and stores the secret in the variable.
 AWS_SECRET_ACCESS_KEY=$(aws iam create-access-key --user-name velero --output text | awk '{print $4}')
@@ -133,7 +138,8 @@ echo $AWS_SECRET_ACCESS_KEY
 echo $AWS_ACCESS_KEY_ID
 ```
 
-### List access key value just created (NOTE, you cannot get the SECRET_ACCESS_KEY after the initial creation)
+### List access key value just created 
+#### NOTE, you cannot get the SECRET_ACCESS_KEY after the initial creation
 ```bash
 aws iam list-access-keys --user-name velero
 ```
@@ -155,18 +161,7 @@ aws iam create-access-key --user-name velero
   }
 }
 ```
-#### Actual
-```
-{
-    "AccessKey": {
-        "UserName": "velero",
-        "AccessKeyId": "redacted",
-        "Status": "Active",
-        "SecretAccessKey": "redacted",
-        "CreateDate": "2023-08-31T13:55:34+00:00"
-    }
-}
-```
+
 ### Create a credentials-velero file: 
 ```bash
 cat << EOF > ./credentials-velero
@@ -174,7 +169,7 @@ cat << EOF > ./credentials-velero
 aws_access_key_id=$AWS_ACCESS_KEY_ID
 aws_secret_access_key=$AWS_SECRET_ACCESS_KEY
 EOF
-# backup credentials file in lab environment
+# Optional: backup credentials file in lab environment
 cp credentials-velero credentials-velero.backup
 ```
 
@@ -184,11 +179,14 @@ oc create secret generic cloud-credentials -n open-cluster-management-backup --f
 ```
 
 ## Create DataProtectionApplication CR
+### Change name in dpa.yaml to bucket specified above
 ```bash
-# Change name in dpa.yaml to bucket specified above
 oc create -f acm-dr/dpa.yaml
 # Wait until complete
 echo "Waiting until complete..."
+output() {
+    oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
+}
 status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
 expected_condition=True
 timeout="300"
@@ -196,14 +194,15 @@ i=1
 until [ "$status" = "$expected_condition" ]
 do
   ((i++))
+  output
   
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
   fi
-
   sleep 3
 done
+ output
 echo "OK to proceed"
 ```
 
@@ -251,6 +250,9 @@ replicaset.apps/velero-759f578c65                              1         1      
 ## Schedule a backup on active cluster
 ```bash
 oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
+# Check status of each backup component
+oc get backup -n open-cluster-management-backup
+for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
 ```
 
 ### Verify ACM policy was created and it compliant
@@ -258,7 +260,7 @@ oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
 oc get policy -n open-cluster-management-backup
 ```
 
-### Verify
+### Troubleshoot issues
 ```bash
 oc get backupStorageLocations -n open-cluster-management-backup
 oc describe -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name)
@@ -293,8 +295,11 @@ TODO commands
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
 echo "Waiting until ready (Succeeded)..."
+output() {
+    oc get csv -n open-cluster-management-backup | grep OADP
+}
 status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-  oc get csv -n open-cluster-management-backup | grep OADP
+  output
 expected_condition="Succeeded"
 timeout="300"
 i=1
@@ -324,11 +329,15 @@ oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
 
-# Wait until complete
+## Create DataProtectionApplication CR
+### Change name in dpa.yaml to bucket specified above
 ```bash
-# Change name in dpa.yaml to bucket specified above
 oc create -f acm-dr/dpa.yaml
+# Wait until complete
 echo "Waiting until complete..."
+output() {
+    oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
+}
 status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
 expected_condition=True
 timeout="300"
@@ -336,14 +345,15 @@ i=1
 until [ "$status" = "$expected_condition" ]
 do
   ((i++))
+  output
   
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
   fi
-
   sleep 3
 done
+ output
 echo "OK to proceed"
 ```
 
