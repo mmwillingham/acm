@@ -30,7 +30,7 @@ i=1
 until [ "$status" = "$expected_condition" ]
 do
   ((i++))
-  
+  output
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
@@ -187,8 +187,9 @@ echo "Waiting until complete..."
 output() {
     oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
 }
-status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
-expected_condition=True
+#status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
+status=$(oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled)
+expected_condition=true
 timeout="300"
 i=1
 until [ "$status" = "$expected_condition" ]
@@ -263,7 +264,7 @@ for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc 
 # To get the status of just the most recent backups
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-credentials-schedule | tail -1) -ojson | jq -r .status.phase
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep resources-generic-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-generic-schedule | tail -1) -ojson | jq -r .status.phase
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
 

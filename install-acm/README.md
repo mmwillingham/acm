@@ -43,7 +43,7 @@ echo $ocp_pass
 echo $ocp_api
 oc login -u $ocp_user $ocp_api # -p $ocp_pass
 oc get nodes
-
+# Verify you see nodes before proceeding
 mkdir ~/git
 cd ~/git
 git clone https://github.com/mmwillingham/acm.git

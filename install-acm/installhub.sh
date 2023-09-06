@@ -15,16 +15,19 @@ oc apply -f install-acm/install-acm-operator.yaml
 #oc get csv | grep advanced-cluster-management | grep Succeeded
 
 echo "Waiting until ACM Operator is ready (Succeeded)..."
+# acm v2.8.1
+output() {
+    oc get csv -n open-cluster-management | grep advanced-cluster-management | awk '{print $1, $NF}'
+  }
+status=$(oc get $(oc get csv -n open-cluster-management -o name | grep advanced-cluster-management) -ojson | jq -r '.status.phase')
+  output
 expected_condition="Succeeded"
 timeout="300"
 i=1
-until [ "$operator_status" = "$expected_condition" ]
+until [ "$status" = "$expected_condition" ]
 do
   ((i++))
-  # acm v2.8.1:
-  operator_status=$(oc get csv -n open-cluster-management | grep advanced-cluster-management | awk '{print $9}')
-  oc get csv -n open-cluster-management | grep advanced-cluster-management
-
+  output
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1

@@ -1,6 +1,10 @@
 #!/bin/bash
 
 acm_backup=acm-credentials-schedule
+acm_backup_result() {
+    oc get csv -n open-cluster-management-backup | grep OADP
+}
+
 acm_backup_result=$(oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep $acm_backup | tail -1) -ojson | jq -r .status.phase)
 echo $acm_backup $acm_backup_result
 expected_condition="Completed"
