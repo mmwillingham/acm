@@ -250,12 +250,29 @@ replicaset.apps/velero-759f578c65                              1         1      
 ## Schedule a backup on active cluster
 ```bash
 oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
-# Check status of each backup component
-oc get backup -n open-cluster-management-backup
-for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
 ```
 
-### Verify ACM policy was created and it compliant
+### Check status of each backup component - this will check all backups, even older ones
+```bash
+oc get backup -n open-cluster-management-backup
+for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
+
+# If you don't have jq
+for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojsonpath='{.status.phase}'; done
+
+# To get the status of just the most recent backups
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-credentials-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep resources-generic-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
+
+# To wait for all to complete
+
+```
+
+
+### Verify ACM policy was created and is compliant
 ```bash
 oc get policy -n open-cluster-management-backup
 ```
