@@ -267,8 +267,8 @@ oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
 
-# To wait for all to complete
-
+# To wait for all to complete - will check the latest of each type of backup
+. ./acm-dr/is_backup_complete.sh
 ```
 
 
