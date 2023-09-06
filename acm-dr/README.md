@@ -269,6 +269,7 @@ oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster
 
 # To wait for all to complete - will check the latest of each type of backup
 . ./acm-dr/is_backup_complete.sh
+# It will progress from null > InProgress > Complete
 ```
 
 

@@ -9,6 +9,7 @@ i=1
 until [ "$acm_backup_result" = "$expected_condition" ]
 do
   ((i++))
+  acm_backup_result=$(oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep $acm_backup | tail -1) -ojson | jq -r .status.phase)
   echo $acm_backup $acm_backup_result
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
@@ -28,6 +29,7 @@ i=1
 until [ "$acm_backup_result" = "$expected_condition" ]
 do
   ((i++))
+  acm_backup_result=$(oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep $acm_backup | tail -1) -ojson | jq -r .status.phase)
   echo $acm_backup $acm_backup_result
 
   if [ "${i}" -gt "${timeout}" ]; then
@@ -48,6 +50,7 @@ i=1
 until [ "$acm_backup_result" = "$expected_condition" ]
 do
   ((i++))
+  acm_backup_result=$(oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep $acm_backup | tail -1) -ojson | jq -r .status.phase)
   echo $acm_backup $acm_backup_result
 
   if [ "${i}" -gt "${timeout}" ]; then
@@ -68,6 +71,7 @@ i=1
 until [ "$acm_backup_result" = "$expected_condition" ]
 do
   ((i++))
+  acm_backup_result=$(oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep $acm_backup | tail -1) -ojson | jq -r .status.phase)
   echo $acm_backup $acm_backup_result
 
   if [ "${i}" -gt "${timeout}" ]; then
@@ -88,6 +92,7 @@ i=1
 until [ "$acm_backup_result" = "$expected_condition" ]
 do
   ((i++))
+  acm_backup_result=$(oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep $acm_backup | tail -1) -ojson | jq -r .status.phase)
   echo $acm_backup $acm_backup_result
 
   if [ "${i}" -gt "${timeout}" ]; then
