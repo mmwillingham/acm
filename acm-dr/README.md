@@ -1,4 +1,11 @@
 # RHACM DR
+## ACM Storage Design
+![ACM Storage Design](/acm-dr/cluster_backup_controller_dataflow25.png)
+### ACM Normal Backup Operation
+![ACM Normal Backup Operation](/acm-dr/acm_active_passive_config_design.png)
+### ACM DR Failover Process
+![ACM DR Failover Process](/acm-dr/acm_disaster_recovery.png)
+#
 ### References
 #### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/business_continuity/index
 #### https://github.com/stolostron/cluster-backup-operator
@@ -6,41 +13,15 @@
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
 
 # Assumptions
-### - ACM is installed on both Active and Passive clusters - IN THE SAME NAMESPACES
-### - All operators installed on Active are also be installed on passive cluster
+#### - ACM is installed on both Active and Passive clusters - IN THE SAME NAMESPACES
+#### - All operators installed on Active are also be installed on passive cluster
     example: Ansible Automation Platform, Red Hat OpenShift GitOps, cert-manager, etc
-### - User has cluster-admin access to Active and Passive clusters
-### - Terminal shell to Active and Passive clusters
-### - Shell has oc, aws, and jq clients
-### - The aws cli has appropriate access to create AWS resources
-
-# High level steps
-## Create AWS resources
-### Create AWS S3 bucket
-### Create IAM user
-### Create policy file and attach to new IAM user
-### Create access key for new IAM user
-### Create credentials-velero file
-## Prepare Active Hub Cluster
-### Install OADP Operator
-### Enable restore of imported managed clusters
-### Create OCP secret from credentials-velero file
-### Create DataProtectionApplication CR
-## Prepare Passive Hub Cluster
-### Install OADP Operator
-### Create credentials-velero file (same content as above)
-### Create OCP secret from credentials-velero file
-### Create DataProtectionApplication CR
-## Backup Active Hub Cluster
-### Schedule a backup
-## Restore (sync) to Passive Hub Cluster (all except managed clusters)
-### oc apply -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
-
-
-# Detailed Steps
-# AWS
-## Download aws cli
-### https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+#### - User has cluster-admin access to Active and Passive clusters
+#### - Terminal shell to Active and Passive clusters
+#### - Shell has oc, aws, and jq clients
+#### - The aws cli has appropriate access to create AWS resources
+##### To Install aws cli
+#### https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 ```bash
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
@@ -49,6 +30,31 @@ sudo ./aws/install
 aws --version
 ```
 
+# High level steps
+## Create AWS resources
+#### Create AWS S3 bucket
+#### Create IAM user
+#### Create policy file and attach to new IAM user
+#### Create access key for new IAM user
+#### Create credentials-velero file
+## Prepare Active Hub Cluster
+#### Install OADP Operator
+#### Enable restore of imported managed clusters
+#### Create OCP secret from credentials-velero file
+#### Create DataProtectionApplication CR
+## Prepare Passive Hub Cluster
+#### Install OADP Operator
+#### Create credentials-velero file (same content as above)
+#### Create OCP secret from credentials-velero file
+#### Create DataProtectionApplication CR
+## Backup Active Hub Cluster
+#### Schedule a backup
+## Restore (sync) to Passive Hub Cluster (all except managed clusters)
+#### oc apply -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
+
+
+# Detailed Steps
+# AWS
 ## Create AWS S3 bucket and access to it
 ### Set the BUCKET variable:
 ```bash
