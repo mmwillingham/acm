@@ -1,17 +1,18 @@
-## RHACM DR
+# RHACM DR
 ### References
 #### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/business_continuity/index
 #### https://github.com/stolostron/cluster-backup-operator
-#### https://cloud.redhat.com/blog/backup-and-restore-hub-clusters-with-red-hat-advanced-cluster-management-for-kubernetes
-#### https://github.com/open-cluster-management-io/policy-collection/tree/main/community/CM-Configuration-Management/acm-app-pv-backup
-#### https://cloud.redhat.com/blog/how-to-backup-and-restore-acm-with-oadp-and-minio
+#### https://github.com/stolostron/cluster-backup-operator/tree/main/config/samples
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
 
-
-
-### Assumes ACM is installed on both primary and backup clusters - IN THE SAME NAMESPACES
-### All operators installed on primary must also be installed on passive cluster
+# Assumptions
+### ACM is installed on both Active and Passive clusters - IN THE SAME NAMESPACES
+### All operators installed on Active are also be installed on passive cluster
 #### example: Ansible Automation Platform, Red Hat OpenShift GitOps, cert-manager, etc
+
+# High level steps
+## Install OADP Operator (Active and Passive)
+
 
 # ACTIVE CLUSTER
 ## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
@@ -461,12 +462,6 @@ oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-ma
 # View contents of s3 bucket after backup
 aws s3api list-objects --bucket rhacm-dr-test-mmw --output table
 ```
-
-
-
-
-
-
 
 ## Troubleshooting backups and restores
 ### https://github.com/openshift/oadp-operator/blob/master/docs/TROUBLESHOOTING.md#backup
