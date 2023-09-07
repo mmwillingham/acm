@@ -15,14 +15,15 @@
 ### - The aws cli has appropriate access to create AWS resources
 
 # High level steps
-## Prepare Active Hub Cluster
-### Install OADP Operator
-### Enable restore of imported managed clusters
+## Create AWS resources
 ### Create AWS S3 bucket
 ### Create IAM user
 ### Create policy file and attach to new IAM user
 ### Create access key for new IAM user
 ### Create credentials-velero file
+## Prepare Active Hub Cluster
+### Install OADP Operator
+### Enable restore of imported managed clusters
 ### Create OCP secret from credentials-velero file
 ### Create DataProtectionApplication CR
 ## Prepare Passive Hub Cluster
@@ -37,44 +38,7 @@
 
 
 # Detailed Steps
-# ACTIVE CLUSTER
-## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
-```bash
-oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
-# Wait until succeeded
-echo "Waiting until ready (Succeeded)..."
-output() {
-    # oc get csv -n open-cluster-management-backup | grep OADP
-    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-}
-#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  output
-expected_condition="Succeeded"
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-echo "OK to proceed"
-```
-
-## Enable restore of imported managed clusters
-```bash
-oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
-# Verify it is set to true
-#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
-oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
-```
-
+# AWS
 ## Download aws cli
 ### https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 ```bash
@@ -85,7 +49,7 @@ sudo ./aws/install
 aws --version
 ```
 
-## Create AWS S3 bucketand access to it
+## Create AWS S3 bucket and access to it
 ### Set the BUCKET variable:
 ```bash
 BUCKET=rhacm-dr-test-mmw
@@ -200,6 +164,44 @@ aws_secret_access_key=$AWS_SECRET_ACCESS_KEY
 EOF
 # Optional: backup credentials file in lab environment
 cp credentials-velero credentials-velero.backup
+```
+
+# ACTIVE CLUSTER
+## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
+```bash
+oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
+# Wait until succeeded
+echo "Waiting until ready (Succeeded)..."
+output() {
+    # oc get csv -n open-cluster-management-backup | grep OADP
+    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
+}
+#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
+  output
+expected_condition="Succeeded"
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
+```
+
+## Enable restore of imported managed clusters
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# Verify it is set to true
+#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 ```
 
 ## Create a Secret with the default name:
