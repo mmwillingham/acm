@@ -37,8 +37,9 @@ oc new-project aws-cred
   Create!
 ```
 
-### 5. Create backup system on Primary and Passive hubs (see acm-dr folder in this repo)
-#### Primary:
+### 5. Create backup system on Active and Passive hubs (see acm-dr folder in this repo)
+
+#### Active:
 ```
 Install OADP Operator
 Enable managedserviceaccount-preview
@@ -46,12 +47,6 @@ Create bucket and access to it
   BUCKET=rhacm-dr-failover-test-mmw
 Create DataProtectionApplication CR
   # Change name in dpa.yaml to bucket specified above
-Schedule a backup on active cluster
-  oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
-Verify
-  watch oc get backup -n open-cluster-management-backup
-  oc get -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters |tail -1) -oyaml
-  oc get -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources |tail -1) -oyaml
 ```
 #### Passive:
 ```
@@ -66,7 +61,17 @@ Verify success
   oc describe -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name)
 ```
 
-### 6. Passive: Restore everything except managed clusters
+### Active: Backup
+```
+Schedule a backup on active cluster
+  oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
+Verify
+  watch oc get backup -n open-cluster-management-backup
+  oc get -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters |tail -1) -oyaml
+  oc get -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources |tail -1) -oyaml
+```
+
+### 6. Passive: Restore everything except managed clusters - and keep in sync with backups on Primary hub
 ```
 Restore
   oc create -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
@@ -74,23 +79,34 @@ Verify restore ran successfully
   watch oc get restore -n open-cluster-management-backup
   oc describe -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name |  head -1) | grep -A9 "Status:"
   oc describe -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name |  head -1)
-Verify managed clusterset exists
+Verify managed clusterset (and any other ACM data created on the Primary hub) exists on Passive (policies, applications, etc.)
+This will not include managed clusters.
   oc get managedclustersets -n open-cluster-management
 ```
-### 7. Failover from Primary to Passive
+
+### 7. Failover from Primary to Passive (Passive will import managed clusters)
 ```
 Primary:
   - To simulate controlled failover, delete backupschedule
-    oc delete -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
-    Stop Primary cluster (how to best do this in a real environment?)
+      oc delete -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
+      Stop Primary cluster (how to best do this in a real environment?)
   - To simulate unplanned failover (disaster on Primary)
-    Stop Primary cluster
+      Stop Primary cluster
 Restore on Passive hub
+If you already restored in the previous step and it's up to date:
   oc delete -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
   oc create -f acm-dr/cluster_v1beta1_restore_passive_activate.yaml
   watch oc get restore -n open-cluster-management-backup
   oc describe -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name |  head -1) | grep -A9 "Status:"
   oc describe -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name |  head -1)
+If you have not already run a restore:
+  oc create -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
+  watch oc get restore -n open-cluster-management-backup
+  oc delete -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
+  oc create -f acm-dr/cluster_v1beta1_restore_passive_activate.yaml
+It is also possible to create a restore job that restores everything with a single restore.
+  oc delete -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
+  oc create -f acm-dr/cluster_v1beta1_restore_passive_all.yaml
 Verify
   oc get managedclusters
 Create backup - this will make it the active hub
@@ -100,9 +116,10 @@ Create backup - this will make it the active hub
 ```
 On passive hub, delete backupschedule. This will ensure no data collisions when it comes back online.
   oc delete -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
-ON passive hub, also delete restores - not sure if this is necessary
+On passive hub, also delete restores (delete whichever ones you created above)
   oc delete -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
   oc delete -f acm-dr/cluster_v1beta1_restore_passive_activate.yaml
+  oc delete -f acm-dr/cluster_v1beta1_restore_passive_all.yaml
 Stop Passive cluster (not really necessary if doing previous step)
 Start Primary cluster
   If recovering from controlled failover, everything should be good because no backupschedule exists
@@ -110,16 +127,14 @@ Start Primary cluster
   To best deal with it, delete backupschedule
     oc delete -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
 Restore data and make it active
-  oc create -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
+  oc create -f acm-dr/cluster_v1beta1_restore_passive_all.yaml
   watch oc get restore -n open-cluster-management-backup
-  oc delete -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
-  oc create -f acm-dr/cluster_v1beta1_restore_passive_activate.yaml
-  watch oc get restore -n open-cluster-management-backup
-  oc delete -f acm-dr/cluster_v1beta1_restore_passive_activate.yaml
+When complete, delete the restore
+  oc delete -f acm-dr/cluster_v1beta1_restore_passive_all.yaml
 
 Verify
   oc get managedclusters
-Create backup on Primary - this will make it the active hub
+Create backup on Primary - this will make it the active hub again
   oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
   watch oc get backup -n open-cluster-management-backup
 ```

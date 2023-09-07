@@ -20,9 +20,11 @@ oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json 
 # Wait until succeeded
 echo "Waiting until ready (Succeeded)..."
 output() {
-    oc get csv -n open-cluster-management-backup | grep OADP
+    # oc get csv -n open-cluster-management-backup | grep OADP
+    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 }
-status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
   output
 expected_condition="Succeeded"
 timeout="300"
@@ -30,7 +32,7 @@ i=1
 until [ "$status" = "$expected_condition" ]
 do
   ((i++))
-  output
+  
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
@@ -40,11 +42,13 @@ do
 done
 echo "OK to proceed"
 ```
+
 ## Enable ability to import clusters on restore
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
-oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 ```
 
 ## Download aws cli
@@ -133,7 +137,8 @@ aws iam put-user-policy --user-name velero --policy-name velero --policy-documen
 ```bash
 # NOTE. The first command creates the access key and stores the secret in the variable.
 AWS_SECRET_ACCESS_KEY=$(aws iam create-access-key --user-name velero --output text | awk '{print $4}')
-AWS_ACCESS_KEY_ID=$(aws iam list-access-keys --user-name velero --output text | tail -1 | awk '{print $2}')
+#AWS_ACCESS_KEY_ID=$(aws iam list-access-keys --user-name velero --output text | tail -1 | awk '{print $2}')
+AWS_ACCESS_KEY_ID=$(aws iam list-access-keys --user-name velero --output json | jq -r .AccessKeyMetadata[].AccessKeyId)
 echo $AWS_SECRET_ACCESS_KEY
 echo $AWS_ACCESS_KEY_ID
 ```
@@ -267,7 +272,7 @@ oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
 
-# To wait for all to complete - will check the latest of each type of backup
+# To wait for all to complete - this will check the latest of each type of backup
 . ./acm-dr/is_backup_complete.sh
 # It will progress from null > InProgress > Complete
 ```
@@ -314,9 +319,11 @@ oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json 
 # Wait until succeeded
 echo "Waiting until ready (Succeeded)..."
 output() {
-    oc get csv -n open-cluster-management-backup | grep OADP
+    # oc get csv -n open-cluster-management-backup | grep OADP
+    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 }
-status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
   output
 expected_condition="Succeeded"
 timeout="300"
@@ -338,8 +345,8 @@ echo "OK to proceed"
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
-oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
-status=$(oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled)
+#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 
 ```
 
