@@ -6,14 +6,37 @@
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
 
 # Assumptions
-### ACM is installed on both Active and Passive clusters - IN THE SAME NAMESPACES
-### All operators installed on Active are also be installed on passive cluster
-#### example: Ansible Automation Platform, Red Hat OpenShift GitOps, cert-manager, etc
+### - ACM is installed on both Active and Passive clusters - IN THE SAME NAMESPACES
+### - All operators installed on Active are also be installed on passive cluster
+    example: Ansible Automation Platform, Red Hat OpenShift GitOps, cert-manager, etc
+### - User has cluster-admin access to Active and Passive clusters
+### - Terminal shell to Active and Passive clusters
+### - Shell has oc, aws, and jq clients
+### - The aws cli has appropriate access to create AWS resources
 
 # High level steps
-## Install OADP Operator (Active and Passive)
+## Prepare Active Hub Cluster
+### Install OADP Operator
+### Enable restore of imported managed clusters
+### Create AWS S3 bucket
+### Create IAM user
+### Create policy file and attach to new IAM user
+### Create access key for new IAM user
+### Create credentials-velero file
+### Create OCP secret from credentials-velero file
+### Create DataProtectionApplication CR
+## Prepare Passive Hub Cluster
+### Install OADP Operator
+### Create credentials-velero file (same content as above)
+### Create OCP secret from credentials-velero file
+### Create DataProtectionApplication CR
+## Backup Active Hub Cluster
+### Schedule a backup
+## Restore (sync) to Passive Hub Cluster (all except managed clusters)
+### oc apply -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
 
 
+# Detailed Steps
 # ACTIVE CLUSTER
 ## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
@@ -44,7 +67,7 @@ done
 echo "OK to proceed"
 ```
 
-## Enable ability to import clusters on restore
+## Enable restore of imported managed clusters
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
@@ -62,7 +85,7 @@ sudo ./aws/install
 aws --version
 ```
 
-## Create bucket and access to it
+## Create AWS S3 bucketand access to it
 ### Set the BUCKET variable:
 ```bash
 BUCKET=rhacm-dr-test-mmw
@@ -79,7 +102,7 @@ aws s3api create-bucket --bucket $BUCKET --region $REGION --create-bucket-config
 # Verify
 aws s3api list-buckets
 ```
-#v# Create an IAM user:
+### Create IAM user:
 ```bash
 aws iam create-user --user-name velero
 ```
