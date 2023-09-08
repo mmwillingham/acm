@@ -34,8 +34,8 @@ aws --version
 ## Create AWS resources
 #### Create AWS S3 bucket
 #### Create IAM user
-#### Create policy file and attach to new IAM user
-#### Create access key for new IAM user
+#### Create policy file and attach to new IAM user - check on using STS roles instead of IAM user
+#### Create access key for new IAM user - not allowed at Delta unless exception - would require rotating keys every 90 days
 #### Create credentials-velero file
 ## Prepare Active Hub Cluster
 #### Install OADP Operator
