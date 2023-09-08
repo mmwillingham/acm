@@ -11,6 +11,8 @@
 #### https://github.com/stolostron/cluster-backup-operator
 #### https://github.com/stolostron/cluster-backup-operator/tree/main/config/samples
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
+#### https://mobb.ninja/docs/misc/oadp/rosa-sts/
+
 
 # Assumptions
 #### - ACM is installed on both Active and Passive clusters - IN THE SAME NAMESPACES
