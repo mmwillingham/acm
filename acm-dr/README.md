@@ -48,9 +48,13 @@ aws --version
 #### Create OCP secret from credentials-velero file
 #### Create DataProtectionApplication CR
 ## Backup Active Hub Cluster
-#### Schedule a backup
-## Restore (sync) to Passive Hub Cluster (all except managed clusters)
-#### oc apply -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
+#### Create backup schedule
+## Restore to Passive Hub Cluster
+### Options
+#### Restore everything except managed clusters (one time)
+#### Restore everything except managed clusters and continue restoring new backups (sync)
+#### Restore only managed clusters
+#### Restore everything including managed clusters
 
 
 # Detailed Steps
