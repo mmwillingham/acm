@@ -12,6 +12,7 @@
 #### https://github.com/stolostron/cluster-backup-operator/tree/main/config/samples
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
 #### https://mobb.ninja/docs/misc/oadp/rosa-sts/
+#### https://docs.openshift.com/rosa/rosa_backing_up_and_restoring_applications/backing-up-applications.html
 
 
 # Assumptions
@@ -33,22 +34,42 @@ aws --version
 ```
 
 # High level steps
-## Create AWS resources
+
+##   Prepare AWS and OCP resources (Option 1) S3 bucket and IAM User
 #### Create AWS S3 bucket
 #### Create IAM user
 #### Create policy file and attach to new IAM user - check on using STS roles instead of IAM user
 #### Create access key for new IAM user - not allowed at Delta unless exception - would require rotating keys every 90 days
 #### Create credentials-velero file
-## Prepare Active Hub Cluster
+### Prepare Active Hub Cluster
 #### Install OADP Operator
 #### Enable restore of imported managed clusters
 #### Create OCP secret from credentials-velero file
 #### Create DataProtectionApplication CR
-## Prepare Passive Hub Cluster
+### Prepare Passive Hub Cluster
 #### Install OADP Operator
 #### Create credentials-velero file (same content as above)
 #### Create OCP secret from credentials-velero file
 #### Create DataProtectionApplication CR
+### Go to "Backup Active Hub Cluster"
+
+##   Prepare AWS and OCP resources (Option 2) AWS STS 
+### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
+#### Prepare AWS IAM policy to allow access to S3
+#### Create  IAM role trust policy for the cluster
+#### Attach policy to role
+### Prepare Active Hub Cluster
+#### Create OCP secret from AWS token file
+#### Install OADP Operator
+#### Create AWS cloud storage using your AWS credentials
+#### Create DataProtectionApplication CR
+### Prepare Passive Hub Cluster
+#### Create OCP secret from AWS token file
+#### Install OADP Operator
+#### Create AWS cloud storage using your AWS credentials
+#### Create DataProtectionApplication CR
+### Go to "Backup Active Hub Cluster"
+
 ## Backup Active Hub Cluster
 #### Create backup schedule
 ## Restore to Passive Hub Cluster
@@ -60,7 +81,7 @@ aws --version
 
 
 # Detailed Steps
-# AWS
+# Prepare AWS and OCP resources (Option 1) S3 bucket and IAM User
 ## Create AWS S3 bucket and access to it
 ### Set the BUCKET variable:
 ```bash
@@ -178,7 +199,7 @@ EOF
 cp credentials-velero credentials-velero.backup
 ```
 
-# ACTIVE CLUSTER
+## ACTIVE CLUSTER
 ## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
@@ -290,65 +311,6 @@ replicaset.apps/openshift-adp-controller-manager-544985898c    1         1      
 replicaset.apps/velero-759f578c65                              1         1         1       3m13s
 ```
 
-## Schedule a backup on active cluster
-```bash
-oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
-```
-
-### Check status of each backup component - this will check all backups, even older ones
-```bash
-oc get backup -n open-cluster-management-backup
-for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
-
-# If you don't have jq
-for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojsonpath='{.status.phase}'; done
-
-# To get the status of just the most recent backups
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-credentials-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-generic-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
-
-# To wait for all to complete - this will check the latest of each type of backup
-. ./acm-dr/is_backup_complete.sh
-# It will progress from null > InProgress > Complete
-```
-
-
-### Verify ACM policy was created and is compliant
-```bash
-oc get policy -n open-cluster-management-backup
-```
-
-### Troubleshoot issues
-```bash
-oc get backupStorageLocations -n open-cluster-management-backup
-oc describe -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name)
-oc get BackupSchedule -n open-cluster-management-backup
-oc get schedules -n open-cluster-management-backup
-oc describe BackupSchedule -n open-cluster-management-backup
-oc get backup -n open-cluster-management-backup
-# View "Items Backed Up" by one of the backups (this backup includes ACM stuff)
-oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) | grep "Phase:"
-oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | head -1) | grep -A9 "Status:"
-oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | head -1) | grep "Phase:"
-# View contents of s3 bucket after backup
-aws s3api list-objects --bucket rhacm-dr-failover-test-mmw --output table
-```
-
-## As a test, create an object on active hub to be restored
-### oc login to active hub
-### create new clusterset on the active hub
-```bash
-oc create -f acm-dr/create-clusterset-test-dr.yaml
-oc get managedclustersets -n open-cluster-management
-```
-### Backup active hub - or wait for backup schedule interval - or change schedule in cluster_v1beta1_backupschedule_msa.yaml and apply
-```bash
-TODO commands
-```
-
 # PASSIVE CLUSTER
 ## Repeat steps above for installing oadp using same secret
 ## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
@@ -431,6 +393,86 @@ oc get all -n open-cluster-management-backup
 ```bash
 oc get policy -n open-cluster-management-backup
 ```
+
+##   Prepare AWS and OCP resources (Option 2) AWS STS 
+### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
+#### Prepare AWS IAM policy to allow access to S3
+#### Create  IAM role trust policy for the cluster
+#### Attach policy to role
+### Prepare Active Hub Cluster
+#### Create OCP secret from AWS token file
+#### Install OADP Operator
+#### Create AWS cloud storage using your AWS credentials
+#### Create DataProtectionApplication CR
+### Prepare Passive Hub Cluster
+#### Create OCP secret from AWS token file
+#### Install OADP Operator
+#### Create AWS cloud storage using your AWS credentials
+#### Create DataProtectionApplication CR
+### Go to "Backup Active Hub Cluster"
+
+
+
+# Backup and Restore
+## Schedule a backup on active cluster
+```bash
+oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
+```
+
+### Check status of each backup component - this will check all backups, even older ones
+```bash
+oc get backup -n open-cluster-management-backup
+for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
+
+# If you don't have jq
+for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojsonpath='{.status.phase}'; done
+
+# To get the status of just the most recent backups
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-credentials-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-generic-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
+
+# To wait for all to complete - this will check the latest of each type of backup
+. ./acm-dr/is_backup_complete.sh
+# It will progress from null > InProgress > Complete
+```
+
+
+### Verify ACM policy was created and is compliant
+```bash
+oc get policy -n open-cluster-management-backup
+```
+
+### Troubleshoot issues
+```bash
+oc get backupStorageLocations -n open-cluster-management-backup
+oc describe -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name)
+oc get BackupSchedule -n open-cluster-management-backup
+oc get schedules -n open-cluster-management-backup
+oc describe BackupSchedule -n open-cluster-management-backup
+oc get backup -n open-cluster-management-backup
+# View "Items Backed Up" by one of the backups (this backup includes ACM stuff)
+oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) | grep "Phase:"
+oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | head -1) | grep -A9 "Status:"
+oc describe -n open-cluster-management-backup $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | head -1) | grep "Phase:"
+# View contents of s3 bucket after backup
+aws s3api list-objects --bucket rhacm-dr-failover-test-mmw --output table
+```
+
+## As a test, create an object on active hub to be restored
+### oc login to active hub
+### create new clusterset on the active hub
+```bash
+oc create -f acm-dr/create-clusterset-test-dr.yaml
+oc get managedclustersets -n open-cluster-management
+```
+### Backup active hub - or wait for backup schedule interval - or change schedule in cluster_v1beta1_backupschedule_msa.yaml and apply
+```bash
+TODO commands
+```
+
 
 ## Restore on passive cluster
 ### Read the possible collision issues here:
