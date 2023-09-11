@@ -568,16 +568,165 @@ oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.com
 
 #### Create AWS cloud storage using your AWS credentials
 ```bash
-oc create -f acm-dr/cloud-storage.yaml
+# Note: ensure namespace is open-cluster-management-backup
+cat << EOF | oc create -f -
+apiVersion: oadp.openshift.io/v1alpha1
+kind: CloudStorage
+metadata:
+  name: rhacm-${ENV}-oadp
+  namespace: open-cluster-management-backup
+spec:
+  creationSecret:
+    key: credentials
+    name: cloud-credentials
+  enableSharedConfig: true
+  name: rhacm-${ENV}-oadp
+  provider: aws
+  region: $REGION
+EOF
 ```
 #### Create DataProtectionApplication CR
-oc create -f acm-dr/dpa-sts.yaml
+```bash
+cat << EOF | oc create -f -
+apiVersion: oadp.openshift.io/v1alpha1
+kind: DataProtectionApplication
+metadata:
+  name: ${CLUSTER_NAME}-dpa
+  namespace: open-cluster-management-backup
+spec:
+  backupLocations:
+  - bucket:
+      cloudStorageRef:
+        name: rhacm-${ENV}-oadp
+      credential:
+        key: credentials
+        name: cloud-credentials
+      default: true
+      config:
+        region: ${REGION}
+  configuration:
+    velero:
+      defaultPlugins:
+      - openshift
+      - aws
+    restic:
+      enable: false
+  snapshotLocations:
+    - velero:
+        config:
+          credentialsFile: /tmp/credentials/openshift-adp/cloud-credentials-credentials 
+          enableSharedConfig: "true" 
+          profile: default 
+          region: ${REGION} 
+        provider: aws
+EOF
+```
 
 ### Prepare Passive Hub Cluster
-#### Create OCP secret from AWS token file
+```bash
+# Create credentials file
+cat <<EOF > ${SCRATCH}/credentials
+[default]
+role_arn = ${ROLE_ARN}
+web_identity_token_file = /var/run/secrets/openshift/serviceaccount/token
+EOF
+
+# Create secret
+oc -n open-cluster-management-backup create secret generic cloud-credentials --from-file=${SCRATCH}/credentials
+```
+
 #### Install OADP Operator
+```bash
+# It will be installed when setting cluster-backup: true in the mch
+oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
+# Wait until succeeded
+echo "Waiting until ready (Succeeded)..."
+output() {
+    # oc get csv -n open-cluster-management-backup | grep OADP
+    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
+}
+#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
+  output
+expected_condition="Succeeded"
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
+```
+## Enable managedserviceaccount-preview
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# Verify it is set to true
+#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
+```
+
 #### Create AWS cloud storage using your AWS credentials
+```bash
+# Note: ensure namespace is open-cluster-management-backup
+cat << EOF | oc create -f -
+apiVersion: oadp.openshift.io/v1alpha1
+kind: CloudStorage
+metadata:
+  name: rhacm-${ENV}-oadp
+  namespace: open-cluster-management-backup
+spec:
+  creationSecret:
+    key: credentials
+    name: cloud-credentials
+  enableSharedConfig: true
+  name: rhacm-${ENV}-oadp
+  provider: aws
+  region: $REGION
+EOF
+```
 #### Create DataProtectionApplication CR
+```bash
+cat << EOF | oc create -f -
+apiVersion: oadp.openshift.io/v1alpha1
+kind: DataProtectionApplication
+metadata:
+  name: ${CLUSTER_NAME}-dpa
+  namespace: open-cluster-management-backup
+spec:
+  backupLocations:
+  - bucket:
+      cloudStorageRef:
+        name: rhacm-${ENV}-oadp
+      credential:
+        key: credentials
+        name: cloud-credentials
+      default: true
+      config:
+        region: ${REGION}
+  configuration:
+    velero:
+      defaultPlugins:
+      - openshift
+      - aws
+    restic:
+      enable: false
+  snapshotLocations:
+    - velero:
+        config:
+          credentialsFile: /tmp/credentials/openshift-adp/cloud-credentials-credentials 
+          enableSharedConfig: "true" 
+          profile: default 
+          region: ${REGION} 
+        provider: aws
+EOF
+```
 ### Go to "Backup Active Hub Cluster"
 
 
