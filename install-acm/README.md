@@ -9,7 +9,9 @@ cd acm
 ```
 ## To install ACM on hub cluster
 ## (Check version of ACM in subscription within the file installhub.sh)
+### login to OCP
 ```bash
+oc -u login <etc>
 . install-acm/installhub.sh
 ```
 ## Create clusterset for hub & managed
