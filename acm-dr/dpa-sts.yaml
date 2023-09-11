@@ -1,13 +1,13 @@
 apiVersion: oadp.openshift.io/v1alpha1
 kind: DataProtectionApplication
 metadata:
-  name: ${CLUSTER_NAME}-dpa
+  name: rhacm-${ENV}-dpa
   namespace: openshift-adp
 spec:
   backupLocations:
   - bucket:
       cloudStorageRef:
-        name: ${CLUSTER_NAME}-oadp
+        name: rhacm-${ENV}-oadp
       credential:
         key: credentials
         name: cloud-credentials

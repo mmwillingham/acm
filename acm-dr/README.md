@@ -396,14 +396,183 @@ oc get policy -n open-cluster-management-backup
 
 ##   Prepare AWS and OCP resources (Option 2) AWS STS 
 ### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
-#### Prepare AWS IAM policy to allow access to S3
-#### Create  IAM role trust policy for the cluster
-#### Attach policy to role
+#### Set variables
+```bash
+export env=preprod
+export CLUSTER_NAME=rosa-d848h
+export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .id)
+export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
+# The next command results in null - in a ROSA lab environment
+export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o jsonpath='{.spec.serviceAccountIssuer}' | sed 's|^https://||')
+# OR
+echo "Checking OIDC Provider"
+export OIDC_PROVIDER=$(oc get authentication.config.openshift.io cluster -o json | jq -r .spec.serviceAccountIssuer| sed -e "s/^https:\/\///")
+if  [[ -n "${OIDC_PROVIDER}" ]]; then
+echo "Cluster appears to be HCP, getting OIDC provider from rosa command instead of oc command"
+export OIDC_PROVIDER=$(rosa describe cluster -c ${CLUSTER} -o json | jq -r '.aws.sts.oidc_config.issuer_url' | sed  's|^https://||')
+fi
+
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export CLUSTER_VERSION=$(rosa describe cluster -c ${CLUSTER_NAME} -o json | jq -r .version.raw_id | cut -f -2 -d '.')
+export ROLE_NAME="${CLUSTER_NAME}-openshift-oadp-aws-cloud-credentials"
+export SCRATCH="/tmp/${CLUSTER_NAME}/oadp"
+mkdir -p ${SCRATCH}
+echo "Cluster ID: ${ROSA_CLUSTER_ID}, Region: ${REGION}, OIDC Endpoint:
+${OIDC_ENDPOINT}, AWS Account ID: ${AWS_ACCOUNT_ID}"
+# NOTE: OIDC_ENDPONT is null in this RH demo environment, but the cluster isn't STS.
+```
+
+#### Prepare AWS IAM resources
+```bash
+# Create an IAM Policy to allow for S3 Access
+POLICY_ARN=$(aws iam list-policies --query "Policies[?PolicyName=='RosaOadpVer1'].{ARN:Arn}" --output text)
+if [[ -z "${POLICY_ARN}" ]]; then
+cat << EOF > ${SCRATCH}/policy.json
+{
+"Version": "2012-10-17",
+"Statement": [
+  {
+    "Effect": "Allow",
+    "Action": [
+      "s3:CreateBucket",
+      "s3:DeleteBucket",
+      "s3:PutBucketTagging",
+      "s3:GetBucketTagging",
+      "s3:PutEncryptionConfiguration",
+      "s3:GetEncryptionConfiguration",
+      "s3:PutLifecycleConfiguration",
+      "s3:GetLifecycleConfiguration",
+      "s3:GetBucketLocation",
+      "s3:ListBucket",
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucketMultipartUploads",
+      "s3:AbortMultipartUploads",
+      "s3:ListMultipartUploadParts",
+      "s3:DescribeSnapshots",
+      "ec2:DescribeVolumes",
+      "ec2:DescribeVolumeAttribute",
+      "ec2:DescribeVolumesModifications",
+      "ec2:DescribeVolumeStatus",
+      "ec2:CreateTags",
+      "ec2:CreateVolume",
+      "ec2:CreateSnapshot",
+      "ec2:DeleteSnapshot"
+    ],
+    "Resource": "*"
+  }
+ ]}
+EOF
+
+# This requires AWS CLI 2.x
+# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
+POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
+--policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
+--tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
+--output text)
+fi
+
+# workaround if you had to put aws 2.x in a separate folder because no sudo access
+# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
+POLICY_ARN=$(/home/rosa/usr/local/bin/aws iam create-policy --policy-name "RosaOadpVer1" \
+--policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
+--tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
+--output text)
+
+
+# Create an IAM Role trust policy for the cluster
+cat <<EOF > ${SCRATCH}/trust-policy.json
+{
+   "Version": "2012-10-17",
+   "Statement": [{
+     "Effect": "Allow",
+     "Principal": {
+       "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/${OIDC_ENDPOINT}"
+     },
+     "Action": "sts:AssumeRoleWithWebIdentity",
+     "Condition": {
+       "StringEquals": {
+          "${OIDC_ENDPOINT}:sub": [
+            "system:serviceaccount:openshift-adp:openshift-adp-controller-manager",
+            "system:serviceaccount:openshift-adp:velero"]
+       }
+     }
+   }]
+}
+EOF
+
+# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
+ROLE_ARN=$(aws iam create-role --role-name \
+  "${ROLE_NAME}" \
+   --assume-role-policy-document file://${SCRATCH}/trust-policy.json \
+   --tags Key=rosa_cluster_id,Value=${ROSA_CLUSTER_ID} Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
+   --query Role.Arn --output text)
+
+echo ${ROLE_ARN}
+
+# Attach the IAM Policy to the IAM Role
+aws iam attach-role-policy --role-name "${ROLE_NAME}" \
+  --policy-arn ${POLICY_ARN}
+```
+
 ### Prepare Active Hub Cluster
-#### Create OCP secret from AWS token file
+```bash
+# Create credentials file
+cat <<EOF > ${SCRATCH}/credentials
+[default]
+role_arn = ${ROLE_ARN}
+web_identity_token_file = /var/run/secrets/openshift/serviceaccount/token
+EOF
+
+# Create secret
+oc -n open-cluster-management-backup create secret generic cloud-credentials --from-file=${SCRATCH}/credentials
+```
+
 #### Install OADP Operator
+```bash
+# It will be installed when setting cluster-backup: true in the mch
+oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
+# Wait until succeeded
+echo "Waiting until ready (Succeeded)..."
+output() {
+    # oc get csv -n open-cluster-management-backup | grep OADP
+    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
+}
+#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
+  output
+expected_condition="Succeeded"
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
+```
+## Enable managedserviceaccount-preview
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# Verify it is set to true
+#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
+```
+
 #### Create AWS cloud storage using your AWS credentials
+```bash
+oc create -f acm-dr/cloud-storage.yaml
+```
 #### Create DataProtectionApplication CR
+oc create -f acm-dr/dpa-sts.yaml
+
 ### Prepare Passive Hub Cluster
 #### Create OCP secret from AWS token file
 #### Install OADP Operator

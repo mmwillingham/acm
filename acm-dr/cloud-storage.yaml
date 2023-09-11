@@ -1,0 +1,13 @@
+apiVersion: oadp.openshift.io/v1alpha1
+kind: CloudStorage
+metadata:
+  name: rhacm-${ENV}-oadp
+  namespace: open-cluster-management-backup
+spec:
+  creationSecret:
+    key: credentials
+    name: cloud-credentials
+  enableSharedConfig: true
+  name: rhacm-${ENV}-oadp
+  provider: aws
+  region: $REGION
