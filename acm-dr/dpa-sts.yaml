@@ -1,0 +1,31 @@
+apiVersion: oadp.openshift.io/v1alpha1
+kind: DataProtectionApplication
+metadata:
+  name: ${CLUSTER_NAME}-dpa
+  namespace: openshift-adp
+spec:
+  backupLocations:
+  - bucket:
+      cloudStorageRef:
+        name: ${CLUSTER_NAME}-oadp
+      credential:
+        key: credentials
+        name: cloud-credentials
+      default: true
+      config:
+        region: ${REGION}
+  configuration:
+    velero:
+      defaultPlugins:
+      - openshift
+      - aws
+    restic:
+      enable: false
+  snapshotLocations:
+    - velero:
+        config:
+          credentialsFile: /tmp/credentials/openshift-adp/cloud-credentials-credentials 
+          enableSharedConfig: "true" 
+          profile: default 
+          region: ${REGION} 
+        provider: aws
