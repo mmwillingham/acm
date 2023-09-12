@@ -645,8 +645,8 @@ oc get DataProtectionApplication -n open-cluster-management-backup -ojson | jq .
 
 # Verify storage location is ok
 oc get backupStorageLocations -n open-cluster-management-backup
-oc get backupStorageLocations -n open-cluster-management-backup rhacm-preprod-dpa-1 -oyaml
-oc get backupStorageLocations -n open-cluster-management-backup rhacm-preprod-dpa-1 -ojson | jq '.status'
+oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -oyaml
+oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -ojson | jq '.status'
 
 ```
 
