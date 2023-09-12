@@ -398,12 +398,16 @@ oc get policy -n open-cluster-management-backup
 ### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
 #### Set variables
 ```bash
-export env=preprod
+export ENV=preprod
+# Substitute actual cluster name
 export CLUSTER_NAME=rosa-d848h
 export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .id)
+echo ROSA_CLUSTER_ID
 export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
+echo $REGION
 # The next command results in null - in a ROSA lab environment
 export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o jsonpath='{.spec.serviceAccountIssuer}' | sed 's|^https://||')
+echo $OIDC_ENDPOINT
 # OR
 echo "Checking OIDC Provider"
 export OIDC_PROVIDER=$(oc get authentication.config.openshift.io cluster -o json | jq -r .spec.serviceAccountIssuer| sed -e "s/^https:\/\///")
@@ -413,9 +417,13 @@ export OIDC_PROVIDER=$(rosa describe cluster -c ${CLUSTER} -o json | jq -r '.aws
 fi
 
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+echo $AWS_ACCOUNT_ID
 export CLUSTER_VERSION=$(rosa describe cluster -c ${CLUSTER_NAME} -o json | jq -r .version.raw_id | cut -f -2 -d '.')
+echo $CLUSTER_VERSION
 export ROLE_NAME="${CLUSTER_NAME}-openshift-oadp-aws-cloud-credentials"
+echo $ROLE_NAME
 export SCRATCH="/tmp/${CLUSTER_NAME}/oadp"
+echo $SCRATCH
 mkdir -p ${SCRATCH}
 echo "Cluster ID: ${ROSA_CLUSTER_ID}, Region: ${REGION}, OIDC Endpoint:
 ${OIDC_ENDPOINT}, AWS Account ID: ${AWS_ACCOUNT_ID}"
@@ -464,15 +472,15 @@ cat << EOF > ${SCRATCH}/policy.json
   }
  ]}
 EOF
-
-# This requires AWS CLI 2.x
-# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
+  # This requires AWS CLI 2.x
+  # Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
 POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
 --policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
 --tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
 --output text)
 fi
 
+echo $POLICY_ARN
 # workaround if you had to put aws 2.x in a separate folder because no sudo access
 # Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
 POLICY_ARN=$(/home/rosa/usr/local/bin/aws iam create-policy --policy-name "RosaOadpVer1" \
@@ -502,6 +510,8 @@ cat <<EOF > ${SCRATCH}/trust-policy.json
 }
 EOF
 
+cat ${SCRATCH}/trust-policy.json
+
 # Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
 ROLE_ARN=$(aws iam create-role --role-name \
   "${ROLE_NAME}" \
@@ -512,8 +522,7 @@ ROLE_ARN=$(aws iam create-role --role-name \
 echo ${ROLE_ARN}
 
 # Attach the IAM Policy to the IAM Role
-aws iam attach-role-policy --role-name "${ROLE_NAME}" \
-  --policy-arn ${POLICY_ARN}
+aws iam attach-role-policy --role-name "${ROLE_NAME}" --policy-arn ${POLICY_ARN}
 ```
 
 ### Prepare Active Hub Cluster
@@ -525,8 +534,13 @@ role_arn = ${ROLE_ARN}
 web_identity_token_file = /var/run/secrets/openshift/serviceaccount/token
 EOF
 
+cat ${SCRATCH}/credentials
+
 # Create secret
+oc create namespace open-cluster-management-backup
 oc -n open-cluster-management-backup create secret generic cloud-credentials --from-file=${SCRATCH}/credentials
+
+oc get -n open-cluster-management-backup secret cloud-credentials
 ```
 
 #### Install OADP Operator
@@ -548,7 +562,7 @@ i=1
 until [ "$status" = "$expected_condition" ]
 do
   ((i++))
-  
+  output
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
@@ -557,6 +571,7 @@ do
   sleep 3
 done
 echo "OK to proceed"
+# NOTE: The script will initially check for resources that do not exist, but will eventually appear
 ```
 ## Enable managedserviceaccount-preview
 ```bash
@@ -584,6 +599,9 @@ spec:
   provider: aws
   region: $REGION
 EOF
+
+# Verify name and region have expected values
+oc get CloudStorage -n open-cluster-management-backup -oyaml
 ```
 #### Create DataProtectionApplication CR
 ```bash
@@ -620,115 +638,22 @@ spec:
           region: ${REGION} 
         provider: aws
 EOF
+
+oc get DataProtectionApplication -n open-cluster-management-backup -oyaml
+# Verify status is ok
+oc get DataProtectionApplication -n open-cluster-management-backup -ojson | jq .items[].status
+
+# Verify storage location is ok
+oc get backupStorageLocations -n open-cluster-management-backup
+oc get backupStorageLocations -n open-cluster-management-backup rhacm-preprod-dpa-1 -oyaml
+oc get backupStorageLocations -n open-cluster-management-backup rhacm-preprod-dpa-1 -ojson | jq '.status'
+
 ```
 
 ### Prepare Passive Hub Cluster
 ```bash
-# Create credentials file
-cat <<EOF > ${SCRATCH}/credentials
-[default]
-role_arn = ${ROLE_ARN}
-web_identity_token_file = /var/run/secrets/openshift/serviceaccount/token
-EOF
-
-# Create secret
-oc -n open-cluster-management-backup create secret generic cloud-credentials --from-file=${SCRATCH}/credentials
+# Perform same steps as active
 ```
-
-#### Install OADP Operator
-```bash
-# It will be installed when setting cluster-backup: true in the mch
-oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
-# Wait until succeeded
-echo "Waiting until ready (Succeeded)..."
-output() {
-    # oc get csv -n open-cluster-management-backup | grep OADP
-    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-}
-#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  output
-expected_condition="Succeeded"
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-echo "OK to proceed"
-```
-## Enable managedserviceaccount-preview
-```bash
-oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
-# Verify it is set to true
-#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
-oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
-```
-
-#### Create AWS cloud storage using your AWS credentials
-```bash
-# Note: ensure namespace is open-cluster-management-backup
-cat << EOF | oc create -f -
-apiVersion: oadp.openshift.io/v1alpha1
-kind: CloudStorage
-metadata:
-  name: rhacm-${ENV}-oadp
-  namespace: open-cluster-management-backup
-spec:
-  creationSecret:
-    key: credentials
-    name: cloud-credentials
-  enableSharedConfig: true
-  name: rhacm-${ENV}-oadp
-  provider: aws
-  region: $REGION
-EOF
-```
-#### Create DataProtectionApplication CR
-```bash
-cat << EOF | oc create -f -
-apiVersion: oadp.openshift.io/v1alpha1
-kind: DataProtectionApplication
-metadata:
-  name: ${CLUSTER_NAME}-dpa
-  namespace: open-cluster-management-backup
-spec:
-  backupLocations:
-  - bucket:
-      cloudStorageRef:
-        name: rhacm-${ENV}-oadp
-      credential:
-        key: credentials
-        name: cloud-credentials
-      default: true
-      config:
-        region: ${REGION}
-  configuration:
-    velero:
-      defaultPlugins:
-      - openshift
-      - aws
-    restic:
-      enable: false
-  snapshotLocations:
-    - velero:
-        config:
-          credentialsFile: /tmp/credentials/openshift-adp/cloud-credentials-credentials 
-          enableSharedConfig: "true" 
-          profile: default 
-          region: ${REGION} 
-        provider: aws
-EOF
-```
-### Go to "Backup Active Hub Cluster"
-
 
 
 # Backup and Restore
