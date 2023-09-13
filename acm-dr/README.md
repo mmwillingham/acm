@@ -34,8 +34,10 @@ aws --version
 ```
 
 # High level steps
-
-##   Prepare AWS and OCP resources (Option 1) S3 bucket and IAM User
+## Two options are described
+### Option 1: AWS connections using IAM user (non-STS)
+### Option 2: AWS connections using STS
+##   Prepare AWS and OCP resources using IAM User (Option 1)
 #### Create AWS S3 bucket
 #### Create IAM user
 #### Create policy file and attach to new IAM user - check on using STS roles instead of IAM user
@@ -53,7 +55,7 @@ aws --version
 #### Create DataProtectionApplication CR
 ### Go to "Backup Active Hub Cluster"
 
-##   Prepare AWS and OCP resources (Option 2) AWS STS 
+##   Prepare AWS and OCP resources using STS (Option 2)
 ### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
 #### Prepare AWS IAM policy to allow access to S3
 #### Create  IAM role trust policy for the cluster
@@ -81,7 +83,7 @@ aws --version
 
 
 # Detailed Steps
-# Prepare AWS and OCP resources (Option 1) S3 bucket and IAM User
+# Option 1: AWS connections using IAM user (non-STS)
 ## Create AWS S3 bucket and access to it
 ### Set the BUCKET variable:
 ```bash
@@ -394,7 +396,7 @@ oc get all -n open-cluster-management-backup
 oc get policy -n open-cluster-management-backup
 ```
 
-##   Prepare AWS and OCP resources (Option 2) AWS STS 
+##   Prepare AWS and OCP resources using STS (Option 2)
 ### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
 #### Set variables
 ```bash
