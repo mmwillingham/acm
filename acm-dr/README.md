@@ -489,7 +489,7 @@ POLICY_ARN=$(/home/rosa/usr/local/bin/aws iam create-policy --policy-name "RosaO
 --output text)
 
 
-# Create an IAM Role trust policy for the cluster
+# Create an IAM Role trust policy for the cluster - adjusted for open-cluster-management-backup namespace
 cat <<EOF > ${SCRATCH}/trust-policy.json
 {
    "Version": "2012-10-17",
@@ -502,8 +502,8 @@ cat <<EOF > ${SCRATCH}/trust-policy.json
      "Condition": {
        "StringEquals": {
           "${OIDC_ENDPOINT}:sub": [
-            "system:serviceaccount:openshift-adp:openshift-adp-controller-manager",
-            "system:serviceaccount:openshift-adp:velero"]
+            "system:serviceaccount:open-cluster-management-backup:openshift-adp-controller-manager",
+            "system:serviceaccount:open-cluster-management-backup:velero"]
        }
      }
    }]
@@ -512,11 +512,11 @@ EOF
 
 cat ${SCRATCH}/trust-policy.json
 
-# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
+# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup instead and operator name is redhat-oadp-operator
 ROLE_ARN=$(aws iam create-role --role-name \
   "${ROLE_NAME}" \
    --assume-role-policy-document file://${SCRATCH}/trust-policy.json \
-   --tags Key=rosa_cluster_id,Value=${ROSA_CLUSTER_ID} Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
+   --tags Key=rosa_cluster_id,Value=${ROSA_CLUSTER_ID} Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=redhat-oadp-operator \
    --query Role.Arn --output text)
 
 echo ${ROLE_ARN}
@@ -647,7 +647,7 @@ oc get DataProtectionApplication -n open-cluster-management-backup -ojson | jq .
 oc get backupStorageLocations -n open-cluster-management-backup
 oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -oyaml
 oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -ojson | jq '.status'
-
+oc get sc
 ```
 
 ### Prepare Passive Hub Cluster
@@ -665,7 +665,11 @@ oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
 ### Check status of each backup component - this will check all backups, even older ones
 ```bash
 oc get backup -n open-cluster-management-backup
+
+while true; do \
 for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
+sleep 3
+done
 
 # If you don't have jq
 for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojsonpath='{.status.phase}'; done
