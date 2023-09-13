@@ -35,6 +35,7 @@ do
 
   sleep 3
 done
+# Note, this loop is not exiting correctly when Succeeded. CTRL-C to cancel the loop once it reports as Succeeded - or fix the loop issue.
 echo "OK to proceed with next step"
 
 # Install MultiClusterHub
