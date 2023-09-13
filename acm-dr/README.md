@@ -406,6 +406,7 @@ export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json 
 echo $ROSA_CLUSTER_ID
 export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
 echo $REGION
+
 # The next command results in null - in a ROSA lab environment
 export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o jsonpath='{.spec.serviceAccountIssuer}' | sed 's|^https://||')
 echo $OIDC_ENDPOINT
@@ -474,7 +475,7 @@ cat << EOF > ${SCRATCH}/policy.json
  ]}
 EOF
   # This requires AWS CLI 2.x
-  # Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
+  # Note: for RHACM, the namespace is open-cluster-management-backup, not the default openshift-oadp
 POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
 --policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
 --tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
@@ -482,13 +483,6 @@ POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
 fi
 
 echo $POLICY_ARN
-# workaround if you had to put aws 2.x in a separate folder because no sudo access
-# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup
-POLICY_ARN=$(/home/rosa/usr/local/bin/aws iam create-policy --policy-name "RosaOadpVer1" \
---policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
---tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
---output text)
-
 
 # Create an IAM Role trust policy for the cluster - adjusted for open-cluster-management-backup namespace
 cat <<EOF > ${SCRATCH}/trust-policy.json
