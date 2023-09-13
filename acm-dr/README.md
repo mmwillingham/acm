@@ -643,6 +643,7 @@ oc get backupStorageLocations -n open-cluster-management-backup
 oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -oyaml
 oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -ojson | jq '.status'
 oc get sc
+oc get pvc -n open-cluster-management-backup
 ```
 
 ### Prepare Passive Hub Cluster
