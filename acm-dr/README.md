@@ -403,7 +403,7 @@ oc get policy -n open-cluster-management-backup
 export ENV=preprod # Substitute environment name - this is optional but is used for naming the S3 bucket and a few other resources below
 export CLUSTER_NAME=rosa-d848h # Substitute actual cluster name
 export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .id)
-echo ROSA_CLUSTER_ID
+echo $ROSA_CLUSTER_ID
 export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
 echo $REGION
 # The next command results in null - in a ROSA lab environment
