@@ -402,6 +402,7 @@ oc get policy -n open-cluster-management-backup
 ```bash
 export ENV=preprod # Substitute environment name - this is optional but is used for naming the S3 bucket and a few other resources below
 export CLUSTER_NAME=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .name)
+echo $CLUSTER_NAME
 export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .id)
 echo $ROSA_CLUSTER_ID
 export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
@@ -417,7 +418,7 @@ if  [[ -n "${OIDC_PROVIDER}" ]]; then
 echo "Cluster appears to be HCP, getting OIDC provider from rosa command instead of oc command"
 export OIDC_PROVIDER=$(rosa describe cluster -c ${CLUSTER} -o json | jq -r '.aws.sts.oidc_config.issuer_url' | sed  's|^https://||')
 fi
-
+echo $OIDC_PROVIDER
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 echo $AWS_ACCOUNT_ID
 export CLUSTER_VERSION=$(rosa describe cluster -c ${CLUSTER_NAME} -o json | jq -r .version.raw_id | cut -f -2 -d '.')
