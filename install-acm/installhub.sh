@@ -15,15 +15,15 @@ oc apply -f install-acm/install-acm-operator.yaml
 #oc get csv | grep advanced-cluster-management | grep Succeeded
 
 echo "Waiting until ACM Operator is ready (Succeeded)..."
-# acm v2.8.1
-status=$(oc get $(oc get csv -n open-cluster-management -o name | grep advanced-cluster-management) -ojson | jq -r '.status.phase')
-  oc get csv -n open-cluster-management | grep advanced-cluster-management | awk '{print $1, $NF}'
+export status=$(oc get $(oc get csv -n open-cluster-management -o name | grep advanced-cluster-management) -ojson | jq -r '.status.phase')
+oc get csv -n open-cluster-management | grep advanced-cluster-management | awk '{print $1, $NF}'
 expected_condition="Succeeded"
 timeout="300"
 i=1
 until [ "$status" = "$expected_condition" ]
 do
   ((i++))
+  export status=$(oc get $(oc get csv -n open-cluster-management -o name | grep advanced-cluster-management) -ojson | jq -r '.status.phase')
   oc get csv -n open-cluster-management | grep advanced-cluster-management | awk '{print $1, $NF}'
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
@@ -44,15 +44,16 @@ oc apply -f install-acm/multiclusterhub.yaml
 # oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}'
 
 echo "Waiting until ACM MCH is ready (Running)..."
-timeout="3600"
+mch_status=$(oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}')
+oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}'
 expected_condition="Running"
+timeout="3600"
 i=1
 until [ "$mch_status" = "$expected_condition" ]
 do
   ((i++))
   mch_status=$(oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}')
   oc -n open-cluster-management get mch | grep multiclusterhub
-
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
