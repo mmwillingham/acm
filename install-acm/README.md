@@ -12,7 +12,8 @@ cd acm
 ### login to OCP
 ```bash
 oc -u login <etc>
-. install-acm/installhub.sh
+. install-acm/installhub.sh # Note, you initially see an error "Required resource not specified" but after a few seconds, the progress will be shown.
+# There is an issue in the loop so that it doesn't end when the operator is successfully installed. Just CTRL-C and re-run
 ```
 ## Create clusterset for hub & managed
 ```bash

@@ -32,6 +32,7 @@ do
 
   sleep 3
 done
+
 # Note, this loop is not exiting correctly when Succeeded. CTRL-C to cancel the loop once it reports as Succeeded - or fix the loop issue.
 echo "OK to proceed with next step"
 
@@ -46,10 +47,10 @@ echo "Waiting until ACM MCH is ready (Running)..."
 timeout="3600"
 expected_condition="Running"
 i=1
-until [ "$operator_status" = "$expected_condition" ]
+until [ "$mch_status" = "$expected_condition" ]
 do
   ((i++))
-  operator_status=$(oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}')
+  mch_status=$(oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}')
   oc -n open-cluster-management get mch | grep multiclusterhub
 
   if [ "${i}" -gt "${timeout}" ]; then

@@ -409,18 +409,14 @@ export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json 
 echo $ROSA_CLUSTER_ID
 export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
 echo $REGION
+# Set S3_REGION to same as active hub. Passive hub will use the same value, not its own region.
+export S3_REGION=us-east-2 
+echo $S3_REGION
+
 
 # The next command results in null - in a ROSA lab environment
 export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o jsonpath='{.spec.serviceAccountIssuer}' | sed 's|^https://||')
 echo $OIDC_ENDPOINT
-# OR
-echo "Checking OIDC Provider"
-export OIDC_PROVIDER=$(oc get authentication.config.openshift.io cluster -o json | jq -r .spec.serviceAccountIssuer| sed -e "s/^https:\/\///")
-if  [[ -n "${OIDC_PROVIDER}" ]]; then
-echo "Cluster appears to be HCP, getting OIDC provider from rosa command instead of oc command"
-export OIDC_PROVIDER=$(rosa describe cluster -c ${CLUSTER} -o json | jq -r '.aws.sts.oidc_config.issuer_url' | sed  's|^https://||')
-fi
-echo $OIDC_PROVIDER
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 echo $AWS_ACCOUNT_ID
 export CLUSTER_VERSION=$(rosa describe cluster -c ${CLUSTER_NAME} -o json | jq -r .version.raw_id | cut -f -2 -d '.')
@@ -430,7 +426,7 @@ echo $ROLE_NAME
 export SCRATCH="/tmp/${CLUSTER_NAME}/oadp"
 echo $SCRATCH
 mkdir -p ${SCRATCH}
-echo "Cluster ID: ${ROSA_CLUSTER_ID}, Region: ${REGION}, OIDC Endpoint:
+echo "Cluster ID: ${ROSA_CLUSTER_ID}, Region: ${REGION}, S3 Region: ${S3_REGION}, OIDC Endpoint:
 ${OIDC_ENDPOINT}, AWS Account ID: ${AWS_ACCOUNT_ID}"
 # NOTE: OIDC_ENDPONT is null in this RH demo environment, but the cluster isn't STS.
 ```
@@ -523,7 +519,7 @@ echo ${ROLE_ARN}
 aws iam attach-role-policy --role-name "${ROLE_NAME}" --policy-arn ${POLICY_ARN}
 ```
 
-### Prepare Active Hub Cluster
+### Prepare Hub Cluster
 ```bash
 # Create credentials file
 cat <<EOF > ${SCRATCH}/credentials
@@ -547,20 +543,17 @@ oc get -n open-cluster-management-backup secret cloud-credentials
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
 echo "Waiting until ready (Succeeded)..."
-output() {
-    # oc get csv -n open-cluster-management-backup | grep OADP
-    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-}
+oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 #status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
 status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  output
+  oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 expected_condition="Succeeded"
 timeout="300"
 i=1
 until [ "$status" = "$expected_condition" ]
 do
   ((i++))
-  output
+  oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
@@ -568,6 +561,7 @@ do
 
   sleep 3
 done
+
 echo "OK to proceed"
 # NOTE: The script will initially check for resources that do not exist, but will eventually appear
 ```
@@ -596,7 +590,7 @@ spec:
   name: rhacm-${ENV}-oadp
   provider: aws
 # For passive cluster, use the region where bucket, not the cluster, is located,   
-  region: $REGION
+  region: $S3_REGION
 EOF
 
 # Verify name and region have expected values
@@ -621,7 +615,7 @@ spec:
       default: true
       config:
 # For passive cluster, use the region where bucket, not the cluster, is located, 
-        region: ${REGION}
+        region: ${S3_REGION}
   configuration:
     velero:
       defaultPlugins:
@@ -636,7 +630,7 @@ spec:
           enableSharedConfig: "true" 
           profile: default 
 # For passive cluster, use the region where bucket, not the cluster, is located, 
-          region: ${REGION} 
+          region: ${S3_REGION} 
         provider: aws
 EOF
 
@@ -646,15 +640,16 @@ oc get DataProtectionApplication -n open-cluster-management-backup -ojson | jq .
 
 # Verify storage location is ok
 oc get backupStorageLocations -n open-cluster-management-backup
-oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -oyaml
+sleep 30
 oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -ojson | jq '.status'
 oc get sc
-oc get pvc -n open-cluster-management-backup
 ```
 
 ### Prepare Passive Hub Cluster
 ```bash
-# Perform same steps as active EXCEPT, adjust DataProtectionApplication and CloudStorage resources: set REGION variable to where the S3 bucket is located (location of active hub cluster).
+# Perform same steps as active EXCEPT, adjust DataProtectionApplication and CloudStorage resources: set REGION variable to where the S3 bucket is located.
+# When complete, check if backups are available (this will verify connectivity to backups in S3 created by active hub)
+oc get backup -n open-cluster-management-backup
 ```
 
 
@@ -668,13 +663,9 @@ oc create -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
 ```bash
 oc get backup -n open-cluster-management-backup
 
-while true; do \
-for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
-sleep 3
-done
-
-# If you don't have jq
-for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojsonpath='{.status.phase}'; done
+# To wait for all to complete - this will check the latest of each type of backup
+. ./acm-dr/is_backup_complete.sh
+# It will progress from null > InProgress > Complete
 
 # To get the status of just the most recent backups
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-credentials-schedule | tail -1) -ojson | jq -r .status.phase
@@ -683,9 +674,11 @@ oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
 oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
 
-# To wait for all to complete - this will check the latest of each type of backup
-. ./acm-dr/is_backup_complete.sh
-# It will progress from null > InProgress > Complete
+# To check the status of ALL backups, and there might be a lot:
+while true; do \
+for backup in $(oc get backup -n open-cluster-management-backup -o name); do oc get -n open-cluster-management-backup $backup -ojson | jq -r .status.phase; done
+sleep 3
+done
 ```
 
 
@@ -724,11 +717,9 @@ oc get BackupSchedule -n open-cluster-management-backup
 # Wait for next backup to complete or change in the cron setting
 oc edit BackupSchedule -n open-cluster-management-backup
 # Watch progress
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-credentials-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-generic-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
-oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
+# To wait for all to complete - this will check the latest of each type of backup
+. ./acm-dr/is_backup_complete.sh
+# It will progress from null > InProgress > Complete
 ```
 
 
@@ -750,7 +741,28 @@ oc get managedclustersets -n open-cluster-management
 ### NOTE: This will not restore managed clusters.
 ```bash
 oc apply -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
+
+# Check if complete
+restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
+echo $restore_status
+expected_condition="Enabled"
+timeout="300"
+i=1
+until [ "$restore_status" = "$expected_condition" ]
+do
+  ((i++))
+  restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
+  echo $restore_status
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "Restore Complete"
 ```
+
 ### View restore events
 ```bash
 oc get restore -n open-cluster-management-backup
@@ -763,9 +775,44 @@ oc get managedclustersets -n open-cluster-management
 ```
 
 ### Restore Managed Clusters - this will also make this the active cluster
-### NOTE: Shutdown original active cluster
+### IMPORTANT: To ensure no collisions, login to active cluster and delete backup schedule
 ```bash
+# oc login to active node
+oc delete -n open-cluster-management-backup $(oc get backupschedule -n open-cluster-management-backup -o name)
+```
+
+### Now login to passive node
+```bash
+# oc login to passive node
+# You can only have one active restore, so delete any existing ones
+for restores in $(oc get restore -n open-cluster-management-backup -o name)
+do
+oc delete -n open-cluster-management-backup $restores
+done
+
+# Now perform the restore
 oc apply -f acm-dr/cluster_v1beta1_restore_passive_activate.yaml
+
+# Check if complete
+restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
+echo $restore_status
+expected_condition="Finished"
+timeout="300"
+i=1
+until [ "$restore_status" = "$expected_condition" ]
+do
+  ((i++))
+  restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
+  echo $restore_status
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 5
+done
+echo "Restore Complete"
+
 ```
 ### Verify managed clusters were imported
 ```bash
@@ -774,7 +821,7 @@ oc get managedclusters
 
 ### Create backup
 ```bash
-cluster_v1beta1_backupschedule_msa.yaml
+oc apply -f acm-dr/cluster_v1beta1_backupschedule_msa.yaml
 ```
 
 ## Verify
