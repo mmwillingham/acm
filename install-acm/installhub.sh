@@ -44,6 +44,7 @@ oc apply -f install-acm/multiclusterhub.yaml
 # oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}'
 
 echo "Waiting until ACM MCH is ready (Running)..."
+sleep 5
 mch_status=$(oc get -n open-cluster-management $(oc -n open-cluster-management get mch -o name) -ojson | jq -r '.status.phase')
 oc -n open-cluster-management get mch | grep multiclusterhub | awk '{print $2}'
 expected_condition="Running"
