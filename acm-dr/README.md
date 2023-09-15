@@ -617,6 +617,7 @@ spec:
         name: cloud-credentials
       default: true
       config:
+# For passive cluster, use the region where bucket, not the cluster, is located, 
         region: ${REGION}
   configuration:
     velero:
@@ -631,6 +632,7 @@ spec:
           credentialsFile: /tmp/credentials/openshift-adp/cloud-credentials-credentials 
           enableSharedConfig: "true" 
           profile: default 
+# For passive cluster, use the region where bucket, not the cluster, is located, 
           region: ${REGION} 
         provider: aws
 EOF
