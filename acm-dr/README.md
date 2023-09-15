@@ -13,6 +13,8 @@
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
 #### https://mobb.ninja/docs/misc/oadp/rosa-sts/
 #### https://docs.openshift.com/rosa/rosa_backing_up_and_restoring_applications/backing-up-applications.html
+#### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/business_continuity/index#auto-connect-clusters-msa
+#### https://github.com/stolostron/cluster-backup-operator/tree/main#automatically-connecting-clusters-using-managedserviceaccount---tech-preview
 
 
 # Assumptions
@@ -593,6 +595,7 @@ spec:
   enableSharedConfig: true
   name: rhacm-${ENV}-oadp
   provider: aws
+# For passive cluster, use the region where bucket, not the cluster, is located,   
   region: $REGION
 EOF
 
@@ -651,7 +654,7 @@ oc get pvc -n open-cluster-management-backup
 
 ### Prepare Passive Hub Cluster
 ```bash
-# Perform same steps as active
+# Perform same steps as active EXCEPT, adjust DataProtectionApplication and CloudStorage resources: set REGION variable to where the S3 bucket is located (location of active hub cluster).
 ```
 
 
@@ -714,34 +717,34 @@ aws s3api list-objects --bucket rhacm-dr-failover-test-mmw --output table
 oc create -f acm-dr/create-clusterset-test-dr.yaml
 oc get managedclustersets -n open-cluster-management
 ```
-### Backup active hub - or wait for backup schedule interval - or change schedule in cluster_v1beta1_backupschedule_msa.yaml and apply
+### Backup active hub
 ```bash
-TODO commands
+# Check backup schedule
+oc get BackupSchedule -n open-cluster-management-backup
+# Wait for next backup to complete or change in the cron setting
+oc edit BackupSchedule -n open-cluster-management-backup
+# Watch progress
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-credentials-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-managed-clusters-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-generic-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-resources-schedule | tail -1) -ojson | jq -r .status.phase
+oc get -n open-cluster-management-backup -o name $(oc get backup -n open-cluster-management-backup -o name | grep acm-validation-policy-schedule | tail -1) -ojson | jq -r .status.phase
 ```
 
 
 ## Restore on passive cluster
-### Read the possible collision issues here:
-### https://github.com/stolostron/cluster-backup-operator#backup-collisions
-### Restore and keep synced
-#### https://github.com/stolostron/cluster-backup-operator/blob/main/config/samples/cluster_v1beta1_restore_passive_sync.yaml
-### Activate passive to active
-#### https://github.com/stolostron/cluster-backup-operator/blob/main/config/samples/cluster_v1beta1_restore_passive_activate.yaml
+#### Regarding possible collision issues here:
+##### https://github.com/stolostron/cluster-backup-operator#backup-collisions
 
-## oc login to passive hub
-## Confirm the test-dr clusterset does NOT exist
+### NOTE on Managed Clusters:
+### Clusters created by ACM will be automatically imported (because it has a copy of kubeconfig).
+### Clusters imported into ACM will be listed as Pending Import and must be re-imported. HOWEVER, there is a new feature to import automatically using a ManagedServiceAccount - which I will use below.
+
+### oc login to passive hub
+### Confirm the test-dr clusterset does NOT exist
 ```bash
 oc get managedclustersets -n open-cluster-management
 ```
-
-## Restore
-### NOTE on Managed Clusters:
-### Clusters created by ACM will be automatically imported (because it has a copy of kubeconfig).
-### Clusters imported into ACM will be listed as Pending Import and must be re-imported.
-### HOWEVER, there is a new feature to import automatically using a ManagedServiceAccount - which I will use below
-#### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/business_continuity/index#auto-connect-clusters-msa
-#### https://github.com/stolostron/cluster-backup-operator/tree/main#automatically-connecting-clusters-using-managedserviceaccount---tech-preview
-
 
 ### Restore and keep restoring when new backups arrive (restore sync)
 ### NOTE: This will not restore managed clusters.
