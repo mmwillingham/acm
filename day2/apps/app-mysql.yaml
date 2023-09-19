@@ -9,7 +9,7 @@ metadata:
   - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
-    namespace: open-cluster-management
+    namespace: mysql
     server: https://kubernetes.default.svc
   project: default
   source:
@@ -22,5 +22,5 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    #syncOptions:
-    #- CreateNamespace=true
+    syncOptions:
+    - CreateNamespace=true
