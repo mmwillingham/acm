@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:  
-  name: gitops
+  name: mysql
   namespace: openshift-gitops
   labels:
     appgrp: day2
@@ -15,7 +15,7 @@ spec:
   source:
     directory:
       recurse: true
-    path: day2/manifests/gitops
+    path: day2/manifests/mysql
     repoURL: https://github.com/mmwillingham/acm
     targetRevision: HEAD
   syncPolicy:
