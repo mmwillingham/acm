@@ -1,0 +1,8 @@
+apiVersion: helm.openshift.io/v1beta1
+kind: HelmChartRepository
+metadata:  
+  name: sbraman-repo  
+spec:
+  connectionConfig:
+    url: 'https://gsbraman.github.io/stp/'
+  name: STP Helm Charts
