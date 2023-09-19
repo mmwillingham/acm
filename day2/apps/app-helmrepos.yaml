@@ -15,7 +15,7 @@ spec:
     directory:
       recurse: true
     path: day2/manifests/helmrepos
-    repoURL: https://github.com/acm
+    repoURL: https://github.com/mmwillingham/acm
     targetRevision: HEAD
   syncPolicy:
     automated:
