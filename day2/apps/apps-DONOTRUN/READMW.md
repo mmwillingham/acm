@@ -1,0 +1,1 @@
+Place apps here that you don't want argoCD to run
