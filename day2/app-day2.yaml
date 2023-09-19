@@ -1,21 +1,20 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:  
-  name: acm
+  name: app-day2
   namespace: openshift-gitops
   labels:
     appgrp: day2
   finalizers:
   - resources-finalizer.argocd.argoproj.io
 spec:
-  destination:
-    namespace: open-cluster-management
+  destination:    
     server: https://kubernetes.default.svc
   project: default
   source:
     directory:
       recurse: true
-    path: install-acm-argo
+    path: day2/apps
     repoURL: https://github.com/mmwillingham/acm
     targetRevision: HEAD
   syncPolicy:

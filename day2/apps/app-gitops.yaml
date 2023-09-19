@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:  
+  name: gitops
+  namespace: openshift-gitops
+  labels:
+    appgrp: day2
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: open-cluster-management
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    directory:
+      recurse: true
+    path: day2/manifests/gitops
+    repoURL: https://github.com/mmwillingham/acm
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    #syncOptions:
+    #- CreateNamespace=true
