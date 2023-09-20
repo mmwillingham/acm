@@ -13,8 +13,8 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    directory:
-      recurse: true
+#    directory:
+#      recurse: true
     path: day2/manifests/acm
     repoURL: https://github.com/mmwillingham/acm
     targetRevision: HEAD
