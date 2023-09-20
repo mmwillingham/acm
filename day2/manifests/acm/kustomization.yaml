@@ -6,4 +6,4 @@ resources:
 - 00-acm-namespace.yaml
 - 01-acm-operatorgroup.yaml
 - 02-acm-subscription.yaml
-#- 03-acm-multiclusterhub.yaml
+- 03-acm-multiclusterhub.yaml
