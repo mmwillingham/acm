@@ -1,5 +1,9 @@
 ## Install gitops/argoCD and integrate into RHACM
 
+Here's a good example that I found later
+https://github.com/ignaciolago/rhacm-gitops/tree/main/resources/03-acm-argocd-integration
+
+
 #### NOTE: The following documentation is terrible. Several steps are duplicated.
 #### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/applications/index#register-gitops
 
