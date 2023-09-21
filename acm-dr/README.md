@@ -402,19 +402,21 @@ oc get policy -n open-cluster-management-backup
 ### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
 #### Set variables
 ```bash
-export ENV=preprod # Substitute environment name - this is optional but is used for naming the S3 bucket and a few other resources below
-export CLUSTER_NAME=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .name)
+export ENV=prod # Substitute environment name - this is optional but is used for naming the S3 bucket and a few other resources below
+echo $ENV
+export CLUSTER_NAME=$(oc cluster-info | grep "running at" | awk -F. '{print $2}')
+#export CLUSTER_NAME=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .name)
 echo $CLUSTER_NAME
 export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .id)
 echo $ROSA_CLUSTER_ID
 export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
 echo $REGION
 # Set S3_REGION to same as active hub. Passive hub will use the same value, not its own region.
-export S3_REGION=us-east-2 
+#export S3_REGION=us-east-2
 echo $S3_REGION
 
 
-# The next command results in null - in a ROSA lab environment
+# The next command results in null if the ROSA cluster is not STS?
 export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o jsonpath='{.spec.serviceAccountIssuer}' | sed 's|^https://||')
 echo $OIDC_ENDPOINT
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)

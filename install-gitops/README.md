@@ -4,6 +4,7 @@ mkdir ~/git
 cd ~/git
 git clone https://github.com/mmwillingham/acm.git
 cd acm
+# oc login
 oc create -k install-gitops/
 ```
 To get ArgoCD admin password
