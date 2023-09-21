@@ -67,4 +67,25 @@ export API_URL=$(rosa describe cluster -c ${CLUSTER_NAME}|grep "API URL" | awk -
 echo "export API_URL=${API_URL}" >> ${HOME}/.bashrc
 ```
 
+## Create cluster-admin user, then login with it.
+```bash
+rosa create admin --cluster ${CLUSTER_NAME} | tee $HOME/${CLUSTER_NAME}.cmd
+# The cluster-admin password will be displayed. Copy it and paste into a variable.
+export ADMIN_PASSWORD=<value>
+echo "export ADMIN_PASSWORD=${ADMIN_PASSWORD}" >>$HOME/.bashrc
 
+# Login
+oc login ${API_URL} --username cluster-admin --password ${ADMIN_PASSWORD}
+# Verify you are cluster-admin
+oc whoami
+
+# Display the console URL
+oc whoami --show-console
+
+
+
+
+
+# It may take up to 5 minutes before the ID is ready.
+
+```
