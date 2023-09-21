@@ -417,6 +417,11 @@ echo $S3_REGION
 
 
 # The next command results in null if the ROSA cluster is not STS?
+# Check if it is STS
+oc get authentication.config.openshift.io cluster -o json | jq .spec.serviceAccountIssuer
+# Sample output
+# "https://rh-oidc.s3.us-east-1.amazonaws.com/256i475s1nnuaobmhd8hobotj7c6ufpb"
+
 export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o jsonpath='{.spec.serviceAccountIssuer}' | sed 's|^https://||')
 echo $OIDC_ENDPOINT
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -430,7 +435,7 @@ echo $SCRATCH
 mkdir -p ${SCRATCH}
 echo "Cluster ID: ${ROSA_CLUSTER_ID}, Region: ${REGION}, S3 Region: ${S3_REGION}, OIDC Endpoint:
 ${OIDC_ENDPOINT}, AWS Account ID: ${AWS_ACCOUNT_ID}"
-# NOTE: OIDC_ENDPONT is null in this RH demo environment, but the cluster isn't STS.
+
 ```
 
 #### Prepare AWS IAM resources
@@ -477,10 +482,18 @@ cat << EOF > ${SCRATCH}/policy.json
 EOF
   # This requires AWS CLI 2.x
   # Note: for RHACM, the namespace is open-cluster-management-backup, not the default openshift-oadp
+
+# NOTE: The documentation specifies tags. I tested without them and they are not required.
+#POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
+#--policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
+#--tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,#Value=openshift-oadp \
+#--output text)
+
+# Without the tags
 POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
 --policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
---tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=openshift-oadp \
 --output text)
+
 fi
 
 echo $POLICY_ARN
@@ -508,11 +521,18 @@ EOF
 
 cat ${SCRATCH}/trust-policy.json
 
-# Note: for RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup instead and operator name is redhat-oadp-operator
+# NOTE: For RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup instead and operator name is redhat-oadp-operator
+# NOTE: The documentation specifies tags. I tested without them and they are not required.
+#ROLE_ARN=$(aws iam create-role --role-name \
+#  "${ROLE_NAME}" \
+#   --assume-role-policy-document file://${SCRATCH}/trust-policy.json \
+#   --tags Key=rosa_cluster_id,Value=${ROSA_CLUSTER_ID} Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,#Value=open-cluster-management-backup Key=operator_name,Value=redhat-oadp-operator \
+#   --query Role.Arn --output text)
+
+# Without the tags
 ROLE_ARN=$(aws iam create-role --role-name \
   "${ROLE_NAME}" \
    --assume-role-policy-document file://${SCRATCH}/trust-policy.json \
-   --tags Key=rosa_cluster_id,Value=${ROSA_CLUSTER_ID} Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,Value=redhat-oadp-operator \
    --query Role.Arn --output text)
 
 echo ${ROLE_ARN}
@@ -556,6 +576,7 @@ until [ "$status" = "$expected_condition" ]
 do
   ((i++))
   oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
+  status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
   if [ "${i}" -gt "${timeout}" ]; then
       echo "Sorry it took too long"
       exit 1
@@ -565,7 +586,7 @@ do
 done
 
 echo "OK to proceed"
-# NOTE: The script will initially check for resources that do not exist, but will eventually appear
+# NOTE: The script will initially say "error: Required resources not specified", but will eventually appear
 ```
 ## Enable managedserviceaccount-preview
 ```bash
@@ -644,6 +665,7 @@ oc get DataProtectionApplication -n open-cluster-management-backup -ojson | jq .
 oc get backupStorageLocations -n open-cluster-management-backup
 sleep 30
 oc get -n open-cluster-management-backup $(oc get backupStorageLocations -n open-cluster-management-backup -o name) -ojson | jq '.status'
+# Wait for the status to be "Available"
 oc get sc
 ```
 
