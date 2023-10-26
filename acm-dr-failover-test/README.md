@@ -1,6 +1,6 @@
 # NOTE: This information is a little stale. Check with acm-dr/README.md for latest process and scripts.
 
-# hello
+# hello world
 ## The purpose of this procedure is to test the failover from an active to passive ACM hub cluster.
 ### This test includes migration of two managed clusters:
 ### managed1: Imported into Primary ACM cluster
