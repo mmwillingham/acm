@@ -1,6 +1,6 @@
 ```mermaid
 ---
-title: Node
+title: Cluster Creation
 ---
 flowchart LR
     id
