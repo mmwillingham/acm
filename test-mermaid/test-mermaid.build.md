@@ -17,8 +17,7 @@ flowchart TD
   end
 
   subgraph "on the Managed cluster"
-    openshift-gitops-operator --> cert-manager-operator cert-manager-operator --> cert-manager-application(cert-manager-application
-     runs a job to turn the venafi credentials into venafi token, then configures the venafi cert issuer)
+    openshift-gitops-operator --> cert-manager-operator cert-manager-operator --> cert-manager-application(cert-manager-application runs a job to turn the venafi credentials into venafi token, then configures the venafi cert issuer)
     cert-manager-application --> ingress-controller-configuration(ingress-controller-configuration installs 53 cert on the cluster ingress)
     cert-manager-application --> openshift-api-certs-application(openshift-api-certs-application installs 53 cert for the OCP API)
     openshift-api-certs-application --> vault-config-operator
