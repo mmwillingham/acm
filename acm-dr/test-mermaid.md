@@ -1,14 +1,4 @@
-#```mermaid
-#graph BT;
-#A-->B;
-#```
-
-# Cluster Creation Dependencies
-
- 
-
 ```mermaid
-
 ---
 
 title: Cluster Creation
