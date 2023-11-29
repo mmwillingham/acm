@@ -407,6 +407,7 @@ echo $ENV
 export CLUSTER_NAME=$(oc cluster-info | grep "running at" | awk -F. '{print $2}')
 #export CLUSTER_NAME=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .name)
 echo $CLUSTER_NAME
+# ROSA_CLUSTER_ID is only required if you want to include in AWS tags
 export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .id)
 echo $ROSA_CLUSTER_ID
 export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
@@ -426,6 +427,7 @@ export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o json
 echo $OIDC_ENDPOINT
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 echo $AWS_ACCOUNT_ID
+# CLUSTER_VERSION is only required if you want to include in AWS tags
 export CLUSTER_VERSION=$(rosa describe cluster -c ${CLUSTER_NAME} -o json | jq -r .version.raw_id | cut -f -2 -d '.')
 echo $CLUSTER_VERSION
 export ROLE_NAME="${CLUSTER_NAME}-openshift-oadp-aws-cloud-credentials"
@@ -871,4 +873,7 @@ oc logs -f deploy/velero -n open-cluster-management-backup
 alias velero='oc -n open-cluster-management-backup exec deployment/velero -c velero -it -- ./velero'
 velero backup describe <backupName> --details
 velero backup logs <backupName>
+# If everything works on active cluster, and passive says the cloudstorage and dpa are available, but it doesn't list the backups, check the velero pod logs. May say something like this
+# time="2023-09-25T18:34:56Z" level=error msg="Error getting backup metadata from backup store" backup=acm-resources-generic-schedule-20230925173327 backupLocation=dl-rosa10-2s-dpa-1 controller=backup-sync error="rpc error: code = Unknown desc = error getting object backups/acm-resources-generic-schedule-20230925173327/velero-backup.json: AccessDenied: User: arn:aws:sts::693101272312:assumed-role/delegate-admin-rhacm-bkp-restore-us-west-2/1695666895356145449 is not authorized to perform: kms:Decrypt on resource: arn:aws:kms:us-east-1:693101272312:key/dfa432ed-0f3a-45a0-b545-617cadb64911 because no identity-based policy allows the kms:Decrypt action\n\tstatus code: 403, request id: 4MAQKWC0BMJXSCJ8, host id: kdjIg/Iiz/8kGodFriPLyu837ouYE/Mewwynv0pfrw+KVtMB4g+PPoTREnEPlG5eWVKTtNs5rag=" error.file="/remote-source/velero/app/pkg/persistence/object_store.go:294" error.function="github.com/vmware-tanzu/velero/pkg/persistence.(*objectBackupStore).GetBackupMetadata" logSource="/remote-source/velero/app/pkg/controlle...
+# Customer switched and used same KMS Key ID as was used in primary AWS region. Then it worked.
 ```
