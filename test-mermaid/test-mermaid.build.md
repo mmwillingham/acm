@@ -17,7 +17,6 @@ flowchart TD
   end
 
   subgraph "on the Managed cluster"
-
     openshift-gitops-operator --> cert-manager-operator
 
     cert-manager-operator --> cert-manager-application(cert-manager-application runs a job to turn the venafi credentials into venafi token, then configures the venafi cert issuer)
@@ -45,7 +44,6 @@ flowchart TD
     nmstate-configuration --> powerflex-csm-configuration
 
     acs-operator --> acs-secured-configuration(acs-secured-configuration registers the cluster to ACS) 
-
   end
 
 
