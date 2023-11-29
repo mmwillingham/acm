@@ -2,6 +2,6 @@
 ---
 title: Cluster Creation
 ---
-flowchart LR
+flowchart TD
     id
 ```
