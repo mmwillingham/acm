@@ -1,10 +1,11 @@
 # Cluster Creation Dependencies
 ```mermaid
-flowchart TD
-A --> B
 ---
 title: Cluster Creation
 ---
+
+flowchart TD
+A --> B
 
 #flowchart TD
 A --> B
