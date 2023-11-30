@@ -23,7 +23,12 @@ secured-cluster-policy --> acs-secured-configuration
     ACM policy sends ACS bundle 
     to the managed clusters"]
   end
+```
+#flowchart TD
+#A --> B
 
+
+#
 #  subgraph Managed cluster
 #    openshift-gitops-operator --> cert-manager-operator
 #    cert-manager-operator --> cert-manager-application["<b>cert-manager-application</b>
@@ -55,8 +60,4 @@ secured-cluster-policy --> acs-secured-configuration
 #    acs-operator --> acs-secured-configuration["<b>acs-secured-configuration</b>
 #    registers cluster to ACS"] 
 #  end
-```
-#flowchart TD
-#A --> B
-
-
+#
