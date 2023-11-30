@@ -4,7 +4,6 @@
 title: Cluster Creation
 ---
 flowchart TD
-A --> B
 venafi-auth-policy-configuration --> cert-manager-application
 cluster-registration --> openshift-gitops-operator
 github-auth-policy-configuration --> openshift-gitops-operator
