@@ -24,9 +24,6 @@ secured-cluster-policy --> acs-secured-configuration
     to the managed clusters"]
   end
 ```
-#flowchart TD
-#A --> B
-
 
 #
 #  subgraph Managed cluster
