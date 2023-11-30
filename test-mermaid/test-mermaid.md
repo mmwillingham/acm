@@ -1,3 +1,4 @@
+```mermaid
 %%{
   init: {
     'theme': 'base',
@@ -25,3 +26,4 @@
             F
             G
           end
+```
