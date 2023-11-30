@@ -10,7 +10,7 @@ flowchart TD
     <b>secured-cluster-policy</b> --> acs-secured-configuration
 
   subgraph "<b>ACM cluster</b>"
-    xxx-cluster[<b>"xxx-cluster creates the managed cluster"</b>] -- contains --> cluster-registration["<b>cluster-registration</b>
+    xxx-cluster["<b>xxx-cluster creates the managed cluster</b>"] -- contains --> cluster-registration["<b>cluster-registration</b>
     helm chart registers managed cluster to ACM
 and deploys argocd and root app onto it"]
     venafi-auth-policy-configuration["<b>venafi-auth-policy-configuration</b>
