@@ -25,34 +25,34 @@ and deploys argocd and root app onto it"]
   end
 
   subgraph "<b>Managed cluster</b>"
-    <b>openshift-gitops-operator</b> --> cert-manager-operator
-    <b>cert-manager-operator</b> --> cert-manager-application["<b>cert-manager-application</b>
+    "<b>openshift-gitops-operator</b>" --> cert-manager-operator
+    "<b>cert-manager-operator</b>" --> cert-manager-application["<b>cert-manager-application</b>
     runs job to create venafi token 
     from venafi credentials, 
     then configures venafi cert issuer"]
-    <b>cert-manager-application</b> --> ingress-controller-configuration["<b>ingress-controller-configuration</b>
+    "<b>cert-manager-application</b>" --> ingress-controller-configuration["<b>ingress-controller-configuration</b>
     installs 53 cert 
     on the cluster ingress"]
-    <b>cert-manager-application</b> --> openshift-api-certs-application["<b>openshift-api-certs-application</b>
+    "<b>cert-manager-application</b>" --> openshift-api-certs-application["<b>openshift-api-certs-application</b>
     installs 53 cert 
     for the OCP API"]
-    <b>openshift-api-certs-application</b> --> vault-config-operator
-    <b>vault-config-operator</b> --> vault-configuration["<b>vault-configuration</b>
+    "<b>openshift-api-certs-application</b>" --> vault-config-operator
+    "<b>vault-config-operator</b>" --> vault-configuration["<b>vault-configuration</b>
     configures access to vault for 
     extracting infra secrets"]
-   <b> nmstate-operator</b> --> nmstate-configuration["<b>nmstate-configuration</b>
+   "<b> nmstate-operator</b>" --> nmstate-configuration["<b>nmstate-configuration</b>
     allows access to storage network"]
-   <b> namespace-config-operator</b> --> namespace-configuration["<b>namespace-configuration</b>
+   "<b> namespace-config-operator</b>" --> namespace-configuration["<b>namespace-configuration</b>
     deploys ESO secret store 
     to infra namespaces"]
-    <b>vault-configuration</b> --> namespace-configuration
-    <b>external-secret-operator</b> --> namespace-configuration
-    <b>powerflex-csm-operator</b> --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
+    <b>vault-configuration</b>" --> namespace-configuration
+    "<b>external-secret-operator</b>" --> namespace-configuration
+    "<b>powerflex-csm-operator</b>v --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
     deploys CSI storage
     class for cluster"]
-    <b>namespace-configuration</b> --> powerflex-csm-configuration
-    <b>nmstate-configuration</b> --> powerflex-csm-configuration
-    <b>acs-operator</b> --> acs-secured-configuration["<b>acs-secured-configuration</b>
+    "<b>namespace-configuration</b>" --> powerflex-csm-configuration
+    "<b>nmstate-configuration</b>" --> powerflex-csm-configuration
+    "<b>acs-operator</b>" --> acs-secured-configuration["<b>acs-secured-configuration</b>
     registers cluster to ACS"] 
   end
 
