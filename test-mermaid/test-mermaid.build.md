@@ -63,7 +63,7 @@ powerflex-csm-operator --> powerflex-csm-configuration["<b>powerflex-csm-configu
     class for cluster"]
 namespace-configuration --> powerflex-csm-configuration
 nmstate-configuration --> powerflex-csm-configuration
-|acs-operator| --> acs-secured-configuration["<b>acs-secured-configuration</b>
+acs-operator --> acs-secured-configuration["<b>acs-secured-configuration</b>
     registers cluster to ACS"]    
 end
 ```
