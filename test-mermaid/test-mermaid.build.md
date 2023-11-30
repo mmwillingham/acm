@@ -1,5 +1,6 @@
 # Cluster Creation Dependencies
 ```mermaid
+%%{init: {'theme':'forest'}}%%
 ---
 title: Cluster Creation
 ---
