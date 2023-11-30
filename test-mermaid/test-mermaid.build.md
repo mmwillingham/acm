@@ -14,9 +14,6 @@ title: Cluster Creation
       'secondaryColor': '#006100',
       'tertiaryColor': '#fff'
     }
-#    'flowchart': {
-#      'htmlLabels': true
-#      }
   }
 }%%
 flowchart TD
