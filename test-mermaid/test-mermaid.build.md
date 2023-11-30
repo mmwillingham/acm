@@ -42,11 +42,6 @@ openshift-api-certs-application --> vault-config-operator
 end
 ```
 
-#
-#  subgraph Managed cluster
-
-
-
 
 #    
 #    vault-config-operator --> vault-configuration[vault-configuration</b>
