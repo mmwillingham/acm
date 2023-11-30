@@ -19,7 +19,6 @@ title: Cluster Creation
       }
   }
 }%%
-%%{init: {"flowchart": {"htmlLabels": false}} }%%
 flowchart TD
 venafi-auth-policy-configuration --> cert-manager-application
 cluster-registration --> openshift-gitops-operator
