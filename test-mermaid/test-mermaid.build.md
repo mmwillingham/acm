@@ -38,7 +38,7 @@ cert-manager-application --> ingress-controller-configuration["<b>ingress-contro
 cert-manager-application --> openshift-api-certs-application["<b>openshift-api-certs-application</b>
     installs 53 cert 
     for the OCP API"]    
-
+openshift-api-certs-application --> vault-config-operator
 end
 ```
 
@@ -48,7 +48,7 @@ end
 
 
 
-#    openshift-api-certs-application --> vault-config-operator
+#    
 #    vault-config-operator --> vault-configuration[vault-configuration</b>
 #    configures access to vault for 
 #    extracting infra secrets"]
