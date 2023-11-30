@@ -5,9 +5,9 @@ title: Cluster Creation
 ---
 flowchart TD
     venafi-auth-policy-configuration --> cert-manager-application
-    cluster-registration --> openshift-gitops-operator
+    <!-- cluster-registration --> openshift-gitops-operator
     github-auth-policy-configuration --> openshift-gitops-operator
-    secured-cluster-policy --> acs-secured-configuration
+    secured-cluster-policy --> acs-secured-configuration -->
 
   <!-- subgraph ACM cluster
     xxx-cluster["xxx-cluster creates the managed cluster"] -- contains --> cluster-registration["<b>cluster-registration</b>
