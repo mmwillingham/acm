@@ -39,13 +39,6 @@ cert-manager-application --> openshift-api-certs-application["<b>openshift-api-c
     installs 53 cert 
     for the OCP API"]    
 openshift-api-certs-application --> vault-config-operator
-#    vault-config-operator --> vault-configuration[vault-configuration</b>
-#    configures access to vault for 
-#    extracting infra secrets"]
-
-
-
-
 end
 ```
 
@@ -56,7 +49,9 @@ end
 
 
 #    
-
+#    vault-config-operator --> vault-configuration[vault-configuration</b>
+#    configures access to vault for 
+#    extracting infra secrets"]
 #    nmstate-operator --> nmstate-configuration["<b>nmstate-configuration</b>
 #    allows access to storage network"]
 #    namespace-config-operator --> namespace-configuration["<b>namespace-configuration</b>
