@@ -1,6 +1,6 @@
 # Cluster Creation Dependencies
 ```mermaid
-  theme: 'base',
+import { getThemeVariables as baseThemeVariables } from './theme-base';
 ---
 title: Cluster Creation
 ---
