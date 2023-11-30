@@ -5,11 +5,11 @@ title: Cluster Creation
 ---
 flowchart TD
     venafi-auth-policy-configuration --> cert-manager-application
-    <!-- cluster-registration --> openshift-gitops-operator
+    cluster-registration --> openshift-gitops-operator
     github-auth-policy-configuration --> openshift-gitops-operator
-    secured-cluster-policy --> acs-secured-configuration -->
+    secured-cluster-policy --> acs-secured-configuration
 
-  <!-- subgraph ACM cluster
+  subgraph ACM cluster
     xxx-cluster["xxx-cluster creates the managed cluster"] -- contains --> cluster-registration["<b>cluster-registration</b>
     helm chart registers managed cluster to ACM
     and deploys argocd and root app onto it"]
@@ -22,9 +22,9 @@ flowchart TD
     secured-cluster-policy["<b>secured-cluster-policy</b>
     ACM policy sends ACS bundle 
     to the managed clusters"]
-  end -->
+  end
 
-  <!-- subgraph Managed cluster
+  subgraph Managed cluster
     openshift-gitops-operator --> cert-manager-operator
     cert-manager-operator --> cert-manager-application["<b>cert-manager-application</b>
     runs job to create venafi token 
@@ -54,6 +54,6 @@ flowchart TD
     nmstate-configuration --> powerflex-csm-configuration
     acs-operator --> acs-secured-configuration["<b>acs-secured-configuration</b>
     registers cluster to ACS"] 
-  end -->
+  end
 
 ```
