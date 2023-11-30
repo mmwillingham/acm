@@ -1,7 +1,7 @@
 # Cluster Creation Dependencies
 ```mermaid
 ---
-title: Cluster Creation
+title: Cluster Creation["<b>Cluster Creation</b>"]
 ---
 %%{
   init: {
