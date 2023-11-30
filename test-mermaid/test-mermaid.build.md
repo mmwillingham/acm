@@ -13,10 +13,10 @@ title: Cluster Creation
       'lineColor': '#F8B229',
       'secondaryColor': '#006100',
       'tertiaryColor': '#fff'
+    }
     'flowchart': {
       'htmlLabels': true
       }
-    }
   }
 }%%
 %%{init: {"flowchart": {"htmlLabels": false}} }%%
