@@ -58,9 +58,3 @@ acs-operator --> acs-secured-configuration["<b>acs-secured-configuration</b>
     registers cluster to ACS"]    
 end
 ```
-
-
-
-
-#  end
-#
