@@ -42,8 +42,6 @@ openshift-api-certs-application --> vault-config-operator
 vault-config-operator --> vault-configuration["<b>vault-configuration</b>
     configures access to vault 
     for extracting infra secrets"]
-nmstate-operator --> nmstate-configuration["<b>nmstate-configuration</b>
-    allows access to storage network"]
 end
 ```
 
