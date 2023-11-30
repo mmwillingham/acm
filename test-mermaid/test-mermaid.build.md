@@ -3,19 +3,20 @@
 ---
 title: Cluster Creation
 ---
-%%{
-  init: {
-    'theme': 'default',
-    'themeVariables': {
-      'primaryColor': '#BB2528',
-      'primaryTextColor': '#fff',
-      'primaryBorderColor': '#7C0000',
-      'lineColor': '#F8B229',
-      'secondaryColor': '#006100',
-      'tertiaryColor': '#fff'
-    }
-  }
-}%%
+%%{init: {'theme':'forest'}}%%
+#%%{
+#  init: {
+#    'theme': 'default',
+#    'themeVariables': {
+#      'primaryColor': '#BB2528',
+#      'primaryTextColor': '#fff',
+#      'primaryBorderColor': '#7C0000',
+#      'lineColor': '#F8B229',
+#      'secondaryColor': '#006100',
+#      'tertiaryColor': '#fff'
+#    }
+#  }
+#}%%
 flowchart TD
 venafi-auth-policy-configuration --> cert-manager-application
 cluster-registration --> openshift-gitops-operator
