@@ -36,8 +36,8 @@ secured-cluster-policy["<b>secured-cluster-policy</b>
   to the managed clusters"]
 end
 subgraph Managed cluster
-openshift-gitops-operator --> cert-manager-operator
-cert-manager-operator --> cert-manager-application["<b>cert-manager-application</b>
+openshift-gitops-operator -->|cert-manager-operator|
+|cert-manager-operator|--> cert-manager-application["<b>cert-manager-application</b>
     runs job to create venafi token 
     from venafi credentials, 
     then configures venafi cert issuer"]
