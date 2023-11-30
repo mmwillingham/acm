@@ -22,7 +22,7 @@ cluster-registration --> openshift-gitops-operator
 github-auth-policy-configuration --> openshift-gitops-operator
 secured-cluster-policy --> acs-secured-configuration
 subgraph ACM cluster
-xxx-cluster["xxx-cluster creates the managed cluster"] -- contains --> cluster-registration["<b>cluster-registration</b>
+xxx-cluster["<b>ACM cluster creates the managed cluster</b>"] -- contains --> cluster-registration["<b>cluster-registration</b>
   helm chart registers managed cluster to ACM
   and deploys argocd and root app onto it"]
 venafi-auth-policy-configuration["<b>venafi-auth-policy-configuration</b>
