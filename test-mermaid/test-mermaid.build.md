@@ -27,12 +27,13 @@ subgraph Managed cluster
 xxx-cluster["xxx-cluster creates the managed cluster"] -- contains --> cluster-registration["<b>cluster-registration</b>
     helm chart registers managed cluster to ACM
     and deploys argocd and root app onto it"]
+openshift-gitops-operator --> cert-manager-operator
 end
 ```
 
 #
 #  subgraph Managed cluster
-#    openshift-gitops-operator --> cert-manager-operator
+
 #    cert-manager-operator --> cert-manager-application["<b>cert-manager-application</b>
 #    runs job to create venafi token 
 #    from venafi credentials, 
