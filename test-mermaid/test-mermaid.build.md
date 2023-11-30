@@ -5,7 +5,6 @@ title: Cluster Creation
 ---
 flowchart TD
 A --> B
-
 #flowchart TD
 A --> B
 #  venafi-auth-policy-configuration --> cert-manager-application
