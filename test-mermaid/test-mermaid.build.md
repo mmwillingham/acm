@@ -4,10 +4,10 @@
 title: "<b>Cluster Creation</b>"
 ---
 flowchart TD
-    <b>venafi-auth-policy-configuration</b> --> cert-manager-application
-    <b>cluster-registration</b> --> openshift-gitops-operator
-    <b>github-auth-policy-configuration</b> --> openshift-gitops-operator
-    <b>secured-cluster-policy</b> --> acs-secured-configuration
+    "<b>venafi-auth-policy-configuration</b>" --> cert-manager-application
+    "<b>cluster-registration</b>" --> openshift-gitops-operator
+    "<b>github-auth-policy-configuration</b>" --> openshift-gitops-operator
+    "<b>secured-cluster-policy</b>" --> acs-secured-configuration
 
   subgraph "<b>ACM cluster</b>"
     xxx-cluster["<b>xxx-cluster creates the managed cluster</b>"] -- contains --> cluster-registration["<b>cluster-registration</b>
