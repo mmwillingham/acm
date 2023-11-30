@@ -9,7 +9,7 @@ flowchart TD
     <b>github-auth-policy-configuration</b> --> openshift-gitops-operator
     <b>secured-cluster-policy</b> --> acs-secured-configuration
 
-  subgraph "ACM cluster</b>"
+  subgraph "<b>ACM cluster</b>"
     xxx-cluster[<b>"xxx-cluster creates the managed cluster"</b>] -- contains --> cluster-registration["<b>cluster-registration</b>
     helm chart registers managed cluster to ACM
 and deploys argocd and root app onto it"]
