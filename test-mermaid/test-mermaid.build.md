@@ -42,24 +42,25 @@ openshift-api-certs-application --> vault-config-operator
 vault-config-operator --> vault-configuration["<b>vault-configuration</b>
     configures access to vault 
     for extracting infra secrets"]
+nmstate-operator --> nmstate-configuration["<b>nmstate-configuration</b>
+    allows access to storage network"]
+namespace-config-operator --> namespace-configuration["<b>namespace-configuration</b>
+    deploys ESO secret store 
+    to infra namespaces"]
+vault-configuration --> namespace-configuration
+external-secret-operator --> namespace-configuration
+powerflex-csm-operator --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
+    deploys CSI storage
+    class for cluster"]
+namespace-configuration --> powerflex-csm-configuration
+nmstate-configuration --> powerflex-csm-configuration
+acs-operator --> acs-secured-configuration["<b>acs-secured-configuration</b>
+    registers cluster to ACS"]    
 end
 ```
 
 
 
-#    nmstate-operator --> nmstate-configuration["<b>nmstate-configuration</b>
-#    allows access to storage network"]
-#    namespace-config-operator --> namespace-configuration["<b>namespace-configuration</b>
-#    deploys ESO secret store 
-#    to infra namespaces"]
-#    vault-configuration --> namespace-configuration
-#    external-secret-operator --> namespace-configuration
-#    powerflex-csm-operator --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
-#    deploys CSI storage
-#    class for cluster"]
-#    namespace-configuration --> powerflex-csm-configuration
-#    nmstate-configuration --> powerflex-csm-configuration
-#    acs-operator --> acs-secured-configuration["<b>acs-secured-configuration</b>
-#    registers cluster to ACS"] 
+
 #  end
 #
