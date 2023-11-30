@@ -1,6 +1,6 @@
 # Cluster Creation Dependencies
 ```mermaid
-import { getThemeVariables as baseThemeVariables } from './theme-base';
+%%{init: {'theme': 'forest', "flowchart" : { "curve" : "basis" } } }%%
 ---
 title: Cluster Creation
 ---
