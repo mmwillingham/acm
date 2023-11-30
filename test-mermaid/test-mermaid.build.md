@@ -1,5 +1,8 @@
 # Cluster Creation Dependencies
 ```mermaid
+---
+title: Cluster Creation
+---
 %%{
   init: {
     'theme': 'base',
@@ -13,9 +16,6 @@
     }
   }
 }%%
----
-title: Cluster Creation
----
 flowchart TD
 venafi-auth-policy-configuration --> cert-manager-application
 cluster-registration --> openshift-gitops-operator
