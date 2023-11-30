@@ -24,7 +24,7 @@ flowchart TD
     to the managed clusters"]
   end
 
-  subgraph Managed cluster
+  <!-- subgraph Managed cluster
     openshift-gitops-operator --> cert-manager-operator
     cert-manager-operator --> cert-manager-application["<b>cert-manager-application</b>
     runs job to create venafi token 
@@ -54,6 +54,6 @@ flowchart TD
     nmstate-configuration --> powerflex-csm-configuration
     acs-operator --> acs-secured-configuration["<b>acs-secured-configuration</b>
     registers cluster to ACS"] 
-  end
+  end -->
 
 ```
