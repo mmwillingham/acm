@@ -32,6 +32,11 @@ cert-manager-operator --> cert-manager-application["<b>cert-manager-application<
     runs job to create venafi token 
     from venafi credentials, 
     then configures venafi cert issuer"]
+cert-manager-application --> ingress-controller-configuration["<b>ingress-controller-configuration</b>
+    installs 53 cert 
+    on the cluster ingress"]
+    
+
 end
 ```
 
@@ -39,9 +44,7 @@ end
 #  subgraph Managed cluster
 
 
-#    cert-manager-application --> ingress-controller-configuration["<b>ingress-controller-configuration</b>
-#    installs 53 cert 
-#    on the cluster ingress"]
+
 #    cert-manager-application --> openshift-api-certs-application["<b>openshift-api-certs-application</b>
 #    installs 53 cert 
 #    for the OCP API"]
