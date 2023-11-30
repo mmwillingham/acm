@@ -2,9 +2,8 @@
 ```mermaid
 flowchart TD
 A --> B
-
+---
 title: Cluster Creation
-
 ---
 
 #flowchart TD
