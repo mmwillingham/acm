@@ -28,16 +28,17 @@ xxx-cluster["xxx-cluster creates the managed cluster"] -- contains --> cluster-r
     helm chart registers managed cluster to ACM
     and deploys argocd and root app onto it"]
 openshift-gitops-operator --> cert-manager-operator
+cert-manager-operator --> cert-manager-application["<b>cert-manager-application</b>
+    runs job to create venafi token 
+    from venafi credentials, 
+    then configures venafi cert issuer"]
 end
 ```
 
 #
 #  subgraph Managed cluster
 
-#    cert-manager-operator --> cert-manager-application["<b>cert-manager-application</b>
-#    runs job to create venafi token 
-#    from venafi credentials, 
-#    then configures venafi cert issuer"]
+
 #    cert-manager-application --> ingress-controller-configuration["<b>ingress-controller-configuration</b>
 #    installs 53 cert 
 #    on the cluster ingress"]
