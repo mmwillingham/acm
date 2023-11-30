@@ -1,6 +1,5 @@
 # Cluster Creation Dependencies
 ```mermaid
-%%{init: {'theme': 'forest', "flowchart" : { "curve" : "basis" } } }%%
 ---
 title: Cluster Creation
 ---
