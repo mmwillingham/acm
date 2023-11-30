@@ -13,9 +13,13 @@ title: Cluster Creation
       'lineColor': '#F8B229',
       'secondaryColor': '#006100',
       'tertiaryColor': '#fff'
+    'flowchart': {
+      'htmlLabels: false
+      }
     }
   }
 }%%
+%%{init: {"flowchart": {"htmlLabels": false}} }%%
 flowchart TD
 venafi-auth-policy-configuration --> cert-manager-application
 cluster-registration --> openshift-gitops-operator
