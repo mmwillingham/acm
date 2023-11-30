@@ -47,7 +47,7 @@ and deploys argocd and root app onto it"]
     to infra namespaces"]
     vault-configuration --> namespace-configuration
     external-secret-operator --> namespace-configuration
-    powerflex-csm-operator</b> --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
+    powerflex-csm-operator --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
     deploys CSI storage
     class for cluster"]
     namespace-configuration --> powerflex-csm-configuration
