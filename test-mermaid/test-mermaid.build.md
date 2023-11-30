@@ -5,7 +5,7 @@ title: Cluster Creation
 ---
 %%{
   init: {
-    'theme': 'dark',
+    'theme': 'forest',
     'themeVariables': {
       'primaryColor': '#BB2528',
       'primaryTextColor': '#fff',
