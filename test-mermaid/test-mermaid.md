@@ -26,4 +26,6 @@
             F
             G
           end
+flowchart TD
+venafi-auth-policy-configuration --> cert-manager-application
 ```
