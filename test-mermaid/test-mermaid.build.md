@@ -9,14 +9,24 @@ venafi-auth-policy-configuration --> cert-manager-application
 cluster-registration --> openshift-gitops-operator
 github-auth-policy-configuration --> openshift-gitops-operator
 secured-cluster-policy --> acs-secured-configuration
+  subgraph ACM cluster
+    xxx-cluster["xxx-cluster creates the managed cluster"] -- contains --> cluster-registration["<b>cluster-registration</b>
+    helm chart registers managed cluster to ACM
+    and deploys argocd and root app onto it"]
+    venafi-auth-policy-configuration["<b>venafi-auth-policy-configuration</b>
+    ACM policy sends venafi credentials 
+    to the managed clusters"]
+    github-auth-policy-configuration["<b>github-auth-policy-configuration</b>
+    ACM policy sends github credentials 
+    to the managed clusters"]
+    secured-cluster-policy["<b>secured-cluster-policy</b>
+    ACM policy sends ACS bundle 
+    to the managed clusters"]
+  end
 ```
 #flowchart TD
 #A --> B
-#  venafi-auth-policy-configuration --> cert-manager-application
-#    cluster-registration --> openshift-gitops-operator
-#    github-auth-policy-configuration --> openshift-gitops-operator
-#    secured-cluster-policy --> acs-secured-configuration
-#
+
 #  subgraph ACM cluster
 #    xxx-cluster["xxx-cluster creates the managed cluster"] -- contains --> cluster-registration["<b>cluster-registration</b>
 #    helm chart registers managed cluster to ACM
