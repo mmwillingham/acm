@@ -39,6 +39,7 @@ cert-manager-application --> openshift-api-certs-application["<b>openshift-api-c
     installs 53 cert 
     for the OCP API"]    
 openshift-api-certs-application --> vault-config-operator
+vault-config-operator --> vault-configuration
 end
 ```
 
