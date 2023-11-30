@@ -1,7 +1,7 @@
 # Cluster Creation Dependencies
 ```mermaid
 ---
-title: "<b>Cluster Creation</b>"
+title: Cluster Creation
 ---
 flowchart TD
 venafi-auth-policy-configuration --> cert-manager-application
