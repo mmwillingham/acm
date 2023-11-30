@@ -37,17 +37,17 @@ and deploys argocd and root app onto it"]
     installs 53 cert 
     for the OCP API"]
     openshift-api-certs-application --> vault-config-operator
-    "<b>vault-config-operator --> vault-configuration[vault-configuration</b>
+    vault-config-operator --> vault-configuration[vault-configuration</b>
     configures access to vault for 
     extracting infra secrets"]
-   "<b> nmstate-operator --> nmstate-configuration["<b>nmstate-configuration</b>
+    nmstate-operator --> nmstate-configuration["<b>nmstate-configuration</b>
     allows access to storage network"]
     namespace-config-operator --> namespace-configuration["<b>namespace-configuration</b>
     deploys ESO secret store 
     to infra namespaces"]
-    <b>vault-configuration --> namespace-configuration
+    vault-configuration --> namespace-configuration
     external-secret-operator --> namespace-configuration
-    powerflex-csm-operator</b>v --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
+    powerflex-csm-operator</b> --> powerflex-csm-configuration["<b>powerflex-csm-configuration</b>
     deploys CSI storage
     class for cluster"]
     namespace-configuration --> powerflex-csm-configuration
