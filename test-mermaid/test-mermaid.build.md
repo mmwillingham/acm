@@ -1,9 +1,6 @@
 # Cluster Creation Dependencies
 ```mermaid
-mermaidAPI.initialize({
-  securityLevel: 'loose',
   theme: 'base',
-});
 ---
 title: Cluster Creation
 ---
