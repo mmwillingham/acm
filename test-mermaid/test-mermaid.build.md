@@ -24,7 +24,7 @@ and deploys argocd and root app onto it"]
     to the managed clusters"]
   end
 
-  subgraph "Managed cluster</b>"
+  subgraph "<b>Managed cluster</b>"
     <b>openshift-gitops-operator</b> --> cert-manager-operator
     <b>cert-manager-operator</b> --> cert-manager-application["<b>cert-manager-application</b>
     runs job to create venafi token 
