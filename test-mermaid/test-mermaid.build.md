@@ -26,8 +26,8 @@ and deploys argocd and root app onto it"]
 
   subgraph "Managed cluster"
     openshift-gitops-operator --> cert-manager-operator
-    cert-manager-operator --> cert-manager-application["cert-manager-application runs job 
-    to create venafi token 
+    cert-manager-operator --> cert-manager-application["cert-manager-application
+    runs job to create venafi token 
     from venafi credentials, 
     then configures venafi cert issuer"]
     cert-manager-application --> ingress-controller-configuration["ingress-controller-configuration 
@@ -37,23 +37,23 @@ and deploys argocd and root app onto it"]
     installs 53 cert 
     for the OCP API"]
     openshift-api-certs-application --> vault-config-operator
-    vault-config-operator --> vault-configuration["vault-configuration configures access 
-    to vault for 
+    vault-config-operator --> vault-configuration["vault-configuration
+    configures access to vault for 
     extracting infra secrets"]
-    nmstate-operator --> nmstate-configuration["nmstate-configuration allows 
-    access to storage network"]
-    namespace-config-operator --> namespace-configuration["namespace-configuration deploys 
-    ESO secret store 
+    nmstate-operator --> nmstate-configuration["nmstate-configuration
+    allows access to storage network"]
+    namespace-config-operator --> namespace-configuration["namespace-configuration
+    deploys ESO secret store 
     to infra namespaces"]
     vault-configuration --> namespace-configuration
     external-secret-operator --> namespace-configuration
-    powerflex-csm-operator --> powerflex-csm-configuration["powerflex-csm-configuration deploys 
-    CSI storage class 
-    for cluster"]
+    powerflex-csm-operator --> powerflex-csm-configuration["powerflex-csm-configuration
+    deploys CSI storage
+    class for cluster"]
     namespace-configuration --> powerflex-csm-configuration
     nmstate-configuration --> powerflex-csm-configuration
-    acs-operator --> acs-secured-configuration["acs-secured-configuration registers 
-    cluster to ACS"] 
+    acs-operator --> acs-secured-configuration["acs-secured-configuration
+    registers cluster to ACS"] 
   end
 
 
