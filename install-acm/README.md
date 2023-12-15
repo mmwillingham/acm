@@ -20,6 +20,8 @@ oc apply -f install-acm/create-clusterset-hub.yaml
 oc apply -f install-acm/create-clusterset-managed.yaml
 oc get managedclusterset
 ```
+## Need to add namespace-binding to acm-policies (or wherever you put your policies)
+### Steps TBD
 
 ## Assign new clusterset to hub cluster
 ```bash
