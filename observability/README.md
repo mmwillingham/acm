@@ -36,7 +36,7 @@ oc create secret generic multiclusterhub-operator-pull-secret \
     --type=kubernetes.io/dockerconfigjson
 ```
 
-### Create secret for object storage
+### Create object storage and secret
 #### Create thanos-object-storage.yaml based on your cloud provider
 ##### Example for AWS (non-STS)
 ```bash
@@ -68,6 +68,44 @@ stringData:
       insecure: true
       access_key: (redacted)
       secret_key: (redacted)
+EOF
+```
+
+##### Example for Azure
+```bash
+# use actual values for these
+storage_account_name="mmwstorageaccount"
+resource_group_name="openenv-v4z6r"
+location="eastus"
+
+az storage account create \
+ - name $storage_account_name \
+ - resource-group $resource_group_name \
+ - location $location \
+ - sku Standard_LRS \
+ - kind StorageV2
+
+# Take note of the information returned
+account_key=$(az storage account keys list - resource-group $resource_group_name - account-name $storage_account_name | jq -r '.[] | select(.keyName == "key1") | .value')
+
+YOUR_CONTAINER_NAME="observability"
+
+cat << EOF > thanos-object-storage.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: thanos-object-storage
+  namespace: open-cluster-management-observability
+type: Opaque
+stringData:
+  thanos.yaml: |
+    type: AZURE
+    config:
+      storage_account: $storage_account_name
+      storage_account_key: $account_key
+      container: $YOUR_CONTAINER_NAME
+      endpoint: blob.core.windows.net 
+      max_retries: 0
 EOF
 ```
 
