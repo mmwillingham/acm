@@ -78,15 +78,19 @@ storage_account_name="mmwstorageaccount"
 resource_group_name="openenv-v4z6r"
 location="eastus"
 
+az login # this will prompt you to login to Azure
+
 az storage account create \
- - name $storage_account_name \
- - resource-group $resource_group_name \
- - location $location \
- - sku Standard_LRS \
- - kind StorageV2
+ --name $storage_account_name \
+ --resource-group $resource_group_name \
+ --location $location \
+ --sku Standard_LRS \
+ --kind StorageV2
+
 
 # Take note of the information returned
-account_key=$(az storage account keys list - resource-group $resource_group_name - account-name $storage_account_name | jq -r '.[] | select(.keyName == "key1") | .value')
+# Note this command requires jq.
+account_key=$(az storage account keys list --resource-group $resource_group_name --account-name $storage_account_name | jq -r '.[] | select(.keyName == "key1") | .value')
 
 YOUR_CONTAINER_NAME="observability"
 
