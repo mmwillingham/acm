@@ -252,10 +252,11 @@ oc apply -f multiclusterobservability_cr.yaml
 #### Verify progress
 ```bash
 watch 'oc describe mco observability | grep -A 6 Status'
-oc get deploy multicluster-observability-operator -n open-cluster-management --show-labels
+# It takes about 5 minutes to be ready.
 ```
 
-### Click the Grafana link that is near the console header, from either the console Overview page or the Clusters page.
+### Access observability data
+From ACM console, click Grafana link in Infrastructure > Clusters page
 
 oc get routes -n open-cluster-management
 
