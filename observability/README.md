@@ -23,11 +23,15 @@ oc create namespace open-cluster-management-observability
 ```
 
 ### Generate pull-secret
-#### If secret already exists in open-cluster-management namespace
+#### Check if secret already exists (it will probaly not already exist)
+```bash
+oc get secret multiclusterhub-operator-pull-secret -n open-cluster-management-observability
+```
+#### If yes, store in an environment variable
 ```bash
 DOCKER_CONFIG_JSON=`oc extract secret/multiclusterhub-operator-pull-secret -n open-cluster-management --to=-`
 ```
-#### If not, copy from openshift-config
+#### If no, create it from a copy in openshift-config
 ```bash
 DOCKER_CONFIG_JSON=`oc extract secret/pull-secret -n openshift-config --to=-`
 oc create secret generic multiclusterhub-operator-pull-secret \
