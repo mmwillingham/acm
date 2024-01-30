@@ -7,10 +7,11 @@
 ![ACM DR Failover Process](/acm-dr/acm_disaster_recovery.png)
 #
 ### References
-#### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/business_continuity/index
+#### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.9/html-single/business_continuity/index
 #### https://github.com/stolostron/cluster-backup-operator
 #### https://github.com/stolostron/cluster-backup-operator/tree/main/config/samples
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
+#### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-azure.html
 #### https://mobb.ninja/docs/misc/oadp/rosa-sts/
 #### https://docs.openshift.com/rosa/rosa_backing_up_and_restoring_applications/backing-up-applications.html
 #### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.8/html-single/business_continuity/index#auto-connect-clusters-msa
