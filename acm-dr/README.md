@@ -40,6 +40,7 @@ aws --version
 ## Two options are described
 ### Option 1: AWS connections using IAM user (non-STS)
 ### Option 2: AWS connections using STS
+### Option 3: Azure connections
 ##   Prepare AWS and OCP resources using IAM User (Option 1)
 #### Create AWS S3 bucket
 #### Create IAM user
@@ -56,7 +57,7 @@ aws --version
 #### Create credentials-velero file (same content as above)
 #### Create OCP secret from credentials-velero file
 #### Create DataProtectionApplication CR
-### Go to "Backup Active Hub Cluster"
+### Go to "Backup and Restore"
 
 ##   Prepare AWS and OCP resources using STS (Option 2)
 ### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
@@ -73,9 +74,23 @@ aws --version
 #### Install OADP Operator
 #### Create AWS cloud storage using your AWS credentials
 #### Create DataProtectionApplication CR
-### Go to "Backup Active Hub Cluster"
+### Go to "Backup and Restore"
 
-## Backup Active Hub Cluster
+##   Prepare Azure and OCP resources using IAM User (Option 3)
+https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-azure.html#installing-oadp-azure
+### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
+### Create Azure storage resources
+### Prepare Active Hub Cluster
+#### Create OCP secret
+#### Install OADP Operator
+#### Create DataProtectionApplication CR
+### Prepare Passive Hub Cluster
+#### Create OCP secret
+#### Install OADP Operator
+#### Create DataProtectionApplication CR
+### Go to "Backup and Restore"
+
+## Backup and Restore (follow this step after preparing cloud and OCP resources)
 #### Create backup schedule
 ## Restore to Passive Hub Cluster
 ### Options
@@ -679,6 +694,252 @@ oc get sc
 oc get backup -n open-cluster-management-backup
 ```
 
+# Option 3: Azure connections
+## Login to Azure
+```bash
+az login
+```
+## Create Azure resources
+### Create resource group
+```bash
+AZURE_RESOURCE_GROUP=Velero_Backups
+AZURE_LOCATION=CentralUS
+az group create -n $AZURE_RESOURCE_GROUP --location $AZURE_LOCATION
+```
+### Create storage account and container
+```bash
+AZURE_STORAGE_ACCOUNT_ID="velero$(uuidgen | cut -d '-' -f5 | tr '[A-Z]' '[a-z]')"
+BLOB_CONTAINER=velero
+az storage account create --name $AZURE_STORAGE_ACCOUNT_ID --resource-group $AZURE_RESOURCE_GROUP --sku Standard_GRS --encryption-services blob --https-only true --kind BlobStorage --access-tier Hot
+az storage container create -n $BLOB_CONTAINER --public-access off --account-name $AZURE_STORAGE_ACCOUNT_ID
+```
+### Obtain storage account access key, custom role, and credentials file
+```bash
+AZURE_STORAGE_ACCOUNT_ACCESS_KEY=`az storage account keys list --account-name $AZURE_STORAGE_ACCOUNT_ID --query "[?keyName == 'key1'].value" -o tsv`
+AZURE_ROLE=Velero
+az role definition create --role-definition '{
+   "Name": "'$AZURE_ROLE'",
+   "Description": "Velero related permissions to perform backups, restores and deletions",
+   "Actions": [
+       "Microsoft.Compute/disks/read",
+       "Microsoft.Compute/disks/write",
+       "Microsoft.Compute/disks/endGetAccess/action",
+       "Microsoft.Compute/disks/beginGetAccess/action",
+       "Microsoft.Compute/snapshots/read",
+       "Microsoft.Compute/snapshots/write",
+       "Microsoft.Compute/snapshots/delete",
+       "Microsoft.Storage/storageAccounts/listkeys/action",
+       "Microsoft.Storage/storageAccounts/regeneratekey/action"
+   ],
+   "AssignableScopes": ["/subscriptions/'$AZURE_SUBSCRIPTION_ID'"]
+   }'
+
+cat << EOF > ./credentials-velero
+AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+AZURE_TENANT_ID=${AZURE_TENANT_ID}
+AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}
+AZURE_STORAGE_ACCOUNT_ACCESS_KEY=${AZURE_STORAGE_ACCOUNT_ACCESS_KEY} 
+AZURE_CLOUD_NAME=AzurePublicCloud
+EOF
+```
+## ACTIVE CLUSTER
+## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
+```bash
+oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
+# Wait until succeeded
+echo "Waiting until ready (Succeeded)..."
+output() {
+    # oc get csv -n open-cluster-management-backup | grep OADP
+    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
+}
+#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
+  output
+expected_condition="Succeeded"
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
+```
+
+## Enable restore of imported managed clusters
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# Verify it is set to true
+#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
+```
+
+## Create a Secret with the default name (see documentation for using a different credential)
+```bash
+oc create secret generic cloud-credentials-azure -n openshift-adp --from-file cloud=credentials-velero
+```
+
+## Create DataProtectionApplication CR
+### Change name in dpa.yaml to bucket specified above
+```bash
+oc create -f acm-dr/dpa.yaml
+# Wait until complete
+echo "Waiting until complete..."
+output() {
+    oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
+}
+status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
+expected_condition=True
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  output
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+  sleep 3
+done
+ output
+echo "OK to proceed"
+```
+
+### Verify success
+```bash
+oc get all -n open-cluster-management-backup
+```
+### Output should be similar
+```
+[rosa@bastion acm-acs]$ oc get pods -n open-cluster-management-backup
+NAME                                                 READY   STATUS    RESTARTS   AGE
+cluster-backup-chart-clusterbackup-5f7568884-k82sz   1/1     Running   0          90m
+cluster-backup-chart-clusterbackup-5f7568884-ssltg   1/1     Running   0          90m
+openshift-adp-controller-manager-544985898c-hksk6    1/1     Running   0          89m
+restic-gwxs9                                         1/1     Running   0          3m2s
+restic-pwfs7                                         1/1     Running   0          3m2s
+velero-759f578c65-nmj2z                              1/1     Running   0          3m2s
+[rosa@bastion acm-acs]$ oc get all -n open-cluster-management-backup
+NAME                                                     READY   STATUS    RESTARTS   AGE
+pod/cluster-backup-chart-clusterbackup-5f7568884-k82sz   1/1     Running   0          90m
+pod/cluster-backup-chart-clusterbackup-5f7568884-ssltg   1/1     Running   0          90m
+pod/openshift-adp-controller-manager-544985898c-hksk6    1/1     Running   0          89m
+pod/restic-gwxs9                                         1/1     Running   0          3m13s
+pod/restic-pwfs7                                         1/1     Running   0          3m13s
+pod/velero-759f578c65-nmj2z                              1/1     Running   0          3m13s
+
+NAME                                                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/openshift-adp-controller-manager-metrics-service   ClusterIP   172.30.67.227    <none>        8443/TCP   90m
+service/openshift-adp-velero-metrics-svc                   ClusterIP   172.30.137.151   <none>        8085/TCP   3m13s
+
+NAME                    DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+daemonset.apps/restic   2         2         2       2            2           <none>          3m13s
+
+NAME                                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/cluster-backup-chart-clusterbackup   2/2     2            2           90m
+deployment.apps/openshift-adp-controller-manager     1/1     1            1           89m
+deployment.apps/velero                               1/1     1            1           3m13s
+
+NAME                                                           DESIRED   CURRENT   READY   AGE
+replicaset.apps/cluster-backup-chart-clusterbackup-5f7568884   2         2         2       90m
+replicaset.apps/openshift-adp-controller-manager-544985898c    1         1         1       89m
+replicaset.apps/velero-759f578c65                              1         1         1       3m13s
+```
+
+# PASSIVE CLUSTER
+## Repeat steps above for installing oadp using same secret
+## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
+```bash
+oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
+# Wait until succeeded
+echo "Waiting until ready (Succeeded)..."
+output() {
+    # oc get csv -n open-cluster-management-backup | grep OADP
+    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
+}
+#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
+status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
+  output
+expected_condition="Succeeded"
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+
+  sleep 3
+done
+echo "OK to proceed"
+```
+## Enable managedserviceaccount-preview
+```bash
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# Verify it is set to true
+#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
+oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
+
+```
+
+## Create a Secret with the default name
+### Note: you will need to create the same file that was created above
+```bash
+oc create secret generic cloud-credentials-azure -n openshift-adp --from-file cloud=credentials-velero
+```
+
+## Create DataProtectionApplication CR
+### Change name in dpa.yaml to bucket specified above
+```bash
+oc create -f acm-dr/dpa.yaml
+# Wait until complete
+echo "Waiting until complete..."
+output() {
+    oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
+}
+status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
+expected_condition=True
+timeout="300"
+i=1
+until [ "$status" = "$expected_condition" ]
+do
+  ((i++))
+  output
+  
+  if [ "${i}" -gt "${timeout}" ]; then
+      echo "Sorry it took too long"
+      exit 1
+  fi
+  sleep 3
+done
+ output
+echo "OK to proceed"
+```
+
+### Verify success
+```bash
+oc get all -n open-cluster-management-backup
+```
+
+### Verify ACM policy was created and it compliant
+```bash
+oc get policy -n open-cluster-management-backup
+```
+
+# end Azure
 
 # Backup and Restore
 ## Schedule a backup on active cluster
