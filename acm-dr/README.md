@@ -10,7 +10,7 @@
 #### https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.9/html-single/business_continuity/index
 #### https://github.com/stolostron/cluster-backup-operator
 #### https://github.com/stolostron/cluster-backup-operator/tree/main/config/samples
-#### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-aws.html
+#### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restoreopen-cluster-management-backup/installing/installing-oadp-aws.html
 #### https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-azure.html
 #### https://mobb.ninja/docs/misc/oadp/rosa-sts/
 #### https://docs.openshift.com/rosa/rosa_backing_up_and_restoring_applications/backing-up-applications.html
@@ -788,7 +788,7 @@ oc create secret generic cloud-credentials-azure -n openshift-adp --from-file cl
 ```
 
 ## Create DataProtectionApplication CR
-### IMPORTANT: Change values in dpa.yaml to use details obtained above
+### IMPORTANT: Change values in dpa_azure.yaml to use details obtained above
 ```bash
 oc create -f acm-dr/dpa_azure.yaml
 # Wait until complete
