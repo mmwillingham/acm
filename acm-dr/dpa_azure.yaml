@@ -20,7 +20,7 @@ spec:
           resourceGroup: <AZURE_RESOURCE_GROUP>
           storageAccount: <AZURE_STORAGE_ACCOUNT_ID> 
           subscriptionId: <AZURE_SUBSCRIPTION_ID> 
-          storageAccountKeyEnvVar: <AZURE_STORAGE_ACCOUNT_ACCESS_KEY>
+          storageAccountKeyEnvVar: AZURE_STORAGE_ACCOUNT_ACCESS_KEY # Do not put the storage account key value here, but only the variable
         credential:
           key: cloud
           name: cloud-credentials-azure  

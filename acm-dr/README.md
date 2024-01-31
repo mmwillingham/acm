@@ -43,36 +43,14 @@ aws --version
 
 # Detailed Steps
 # Option 1: AWS (non-STS)
-## Configure storage
+## Configure prerequisite storage
 ### see configure_storage_aws_non-sts.md
 ## ACTIVE CLUSTER
 ### Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
-echo "Waiting until ready (Succeeded)..."
-output() {
-    # oc get csv -n open-cluster-management-backup | grep OADP
-    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-}
-#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  output
-expected_condition="Succeeded"
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-echo "OK to proceed"
+oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 ```
 
 ### Enable restore of imported managed clusters
@@ -93,27 +71,7 @@ oc create secret generic cloud-credentials -n open-cluster-management-backup --f
 ```bash
 oc create -f acm-dr/dpa.yaml
 # Wait until complete
-echo "Waiting until complete..."
-output() {
     oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
-}
-status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
-expected_condition=True
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  output
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-  sleep 3
-done
- output
-echo "OK to proceed"
 ```
 
 #### Verify success
@@ -163,29 +121,7 @@ replicaset.apps/velero-759f578c65                              1         1      
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
-echo "Waiting until ready (Succeeded)..."
-output() {
-    # oc get csv -n open-cluster-management-backup | grep OADP
-    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-}
-#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  output
-expected_condition="Succeeded"
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-echo "OK to proceed"
+oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 ```
 ### Enable managedserviceaccount-preview
 ```bash
@@ -207,27 +143,7 @@ oc create secret generic cloud-credentials -n open-cluster-management-backup --f
 ```bash
 oc create -f acm-dr/dpa.yaml
 # Wait until complete
-echo "Waiting until complete..."
-output() {
     oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
-}
-status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
-expected_condition=True
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  output
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-  sleep 3
-done
- output
-echo "OK to proceed"
 ```
 
 #### Verify success
@@ -266,28 +182,7 @@ oc get -n open-cluster-management-backup secret cloud-credentials
 # It will be installed when setting cluster-backup: true in the mch
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
-echo "Waiting until ready (Succeeded)..."
 oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-expected_condition="Succeeded"
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-  status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-
-echo "OK to proceed"
 # NOTE: The script will initially say "error: Required resources not specified", but will eventually appear
 ```
 ## Enable managedserviceaccount-preview
@@ -387,29 +282,7 @@ oc get backup -n open-cluster-management-backup
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
-echo "Waiting until ready (Succeeded)..."
-output() {
-    # oc get csv -n open-cluster-management-backup | grep OADP
-    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-}
-#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  output
-expected_condition="Succeeded"
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-echo "OK to proceed"
+oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 ```
 
 ## Enable restore of imported managed clusters
@@ -422,7 +295,7 @@ oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.com
 
 ## Create a Secret with the default name (see documentation for using a different credential)
 ```bash
-oc create secret generic cloud-credentials-azure -n openshift-adp --from-file cloud=credentials-velero
+oc create secret generic cloud-credentials-azure -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
 
 ## Create DataProtectionApplication CR
@@ -430,27 +303,7 @@ oc create secret generic cloud-credentials-azure -n openshift-adp --from-file cl
 ```bash
 oc create -f acm-dr/dpa_azure.yaml
 # Wait until complete
-echo "Waiting until complete..."
-output() {
-    oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
-}
-status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
-expected_condition=True
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  output
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-  sleep 3
-done
- output
-echo "OK to proceed"
+oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
 ```
 
 ### Verify success
@@ -500,29 +353,7 @@ replicaset.apps/velero-759f578c65                              1         1      
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
-echo "Waiting until ready (Succeeded)..."
-output() {
-    # oc get csv -n open-cluster-management-backup | grep OADP
     oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-}
-#status=$(oc get csv -n open-cluster-management-backup | grep OADP | awk '{print $6}')
-status=$(oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]')
-  output
-expected_condition="Succeeded"
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-echo "OK to proceed"
 ```
 ## Enable managedserviceaccount-preview
 ```bash
@@ -544,27 +375,7 @@ oc create secret generic cloud-credentials-azure -n openshift-adp --from-file cl
 ```bash
 oc create -f acm-dr/dpa.yaml
 # Wait until complete
-echo "Waiting until complete..."
-output() {
     oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")'
-}
-status=$(oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditions[] | select(.reason == "Complete")' |jq -r .status)
-expected_condition=True
-timeout="300"
-i=1
-until [ "$status" = "$expected_condition" ]
-do
-  ((i++))
-  output
-  
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-  sleep 3
-done
- output
-echo "OK to proceed"
 ```
 
 ### Verify success
