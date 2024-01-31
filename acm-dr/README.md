@@ -36,191 +36,17 @@ sudo ./aws/install
 aws --version
 ```
 
-# High level steps
-## Two options are described
+## Three options are described
 ### Option 1: AWS connections using IAM user (non-STS)
 ### Option 2: AWS connections using STS
-### Option 3: Azure connections
-##   Prepare AWS and OCP resources using IAM User (Option 1)
-#### Create AWS S3 bucket
-#### Create IAM user
-#### Create policy file and attach to new IAM user - check on using STS roles instead of IAM user
-#### Create access key for new IAM user - not allowed at Delta unless exception - would require rotating keys every 90 days
-#### Create credentials-velero file
-### Prepare Active Hub Cluster
-#### Install OADP Operator
-#### Enable restore of imported managed clusters
-#### Create OCP secret from credentials-velero file
-#### Create DataProtectionApplication CR
-### Prepare Passive Hub Cluster
-#### Install OADP Operator
-#### Create credentials-velero file (same content as above)
-#### Create OCP secret from credentials-velero file
-#### Create DataProtectionApplication CR
-### Go to "Backup and Restore"
-
-##   Prepare AWS and OCP resources using STS (Option 2)
-### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
-#### Prepare AWS IAM policy to allow access to S3
-#### Create  IAM role trust policy for the cluster
-#### Attach policy to role
-### Prepare Active Hub Cluster
-#### Create OCP secret from AWS token file
-#### Install OADP Operator
-#### Create AWS cloud storage using your AWS credentials
-#### Create DataProtectionApplication CR
-### Prepare Passive Hub Cluster
-#### Create OCP secret from AWS token file
-#### Install OADP Operator
-#### Create AWS cloud storage using your AWS credentials
-#### Create DataProtectionApplication CR
-### Go to "Backup and Restore"
-
-##   Prepare Azure and OCP resources using IAM User (Option 3)
-https://docs.openshift.com/container-platform/4.12/backup_and_restore/application_backup_and_restore/installing/installing-oadp-azure.html#installing-oadp-azure
-### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
-### Create Azure storage resources
-### Prepare Active Hub Cluster
-#### Create OCP secret
-#### Install OADP Operator
-#### Create DataProtectionApplication CR
-### Prepare Passive Hub Cluster
-#### Create OCP secret
-#### Install OADP Operator
-#### Create DataProtectionApplication CR
-### Go to "Backup and Restore"
-
-## Backup and Restore (follow this step after preparing cloud and OCP resources)
-#### Create backup schedule
-## Restore to Passive Hub Cluster
-### Options
-#### Restore everything except managed clusters (one time)
-#### Restore everything except managed clusters and continue restoring new backups (sync)
-#### Restore only managed clusters
-#### Restore everything including managed clusters
-
+### Option 3: Azure
 
 # Detailed Steps
-# Option 1: AWS connections using IAM user (non-STS)
-## Create AWS S3 bucket and access to it
-### Set the BUCKET variable:
-```bash
-BUCKET=rhacm-dr-test-mmw
-# Specify same name in dpa.yaml
-```
-### Set the REGION variable:
-```bash
-REGION=us-east-2
-# Specify same region in dpa.yaml
-```
-### Create an AWS S3 bucket:
-```bash
-aws s3api create-bucket --bucket $BUCKET --region $REGION --create-bucket-configuration LocationConstraint=$REGION
-# Verify
-aws s3api list-buckets
-```
-### Create IAM user:
-```bash
-aws iam create-user --user-name velero
-```
-### Create a velero-policy.json file:
-```bash
-cat > velero-policy.json <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DescribeVolumes",
-                "ec2:DescribeSnapshots",
-                "ec2:CreateTags",
-                "ec2:CreateVolume",
-                "ec2:CreateSnapshot",
-                "ec2:DeleteSnapshot"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:GetObject",
-                "s3:DeleteObject",
-                "s3:PutObject",
-                "s3:AbortMultipartUpload",
-                "s3:ListMultipartUploadParts"
-            ],
-            "Resource": [
-                "arn:aws:s3:::${BUCKET}/*"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:ListBucket",
-                "s3:GetBucketLocation",
-                "s3:ListBucketMultipartUploads"
-            ],
-            "Resource": [
-                "arn:aws:s3:::${BUCKET}"
-            ]
-        }
-    ]
-}
-EOF
-```
-
-### Attach the policies to give the velero user the minimum necessary permissions
-```bash
-aws iam put-user-policy --user-name velero --policy-name velero --policy-document file://velero-policy.json
-```
-### Create an access key for the velero user
-```bash
-# NOTE. The first command creates the access key and stores the secret in the variable.
-AWS_SECRET_ACCESS_KEY=$(aws iam create-access-key --user-name velero --output text | awk '{print $4}')
-#AWS_ACCESS_KEY_ID=$(aws iam list-access-keys --user-name velero --output text | tail -1 | awk '{print $2}')
-AWS_ACCESS_KEY_ID=$(aws iam list-access-keys --user-name velero --output json | jq -r .AccessKeyMetadata[].AccessKeyId)
-echo $AWS_SECRET_ACCESS_KEY
-echo $AWS_ACCESS_KEY_ID
-```
-
-### List access key value just created 
-#### NOTE, you cannot get the SECRET_ACCESS_KEY after the initial creation
-```bash
-aws iam list-access-keys --user-name velero
-```
-#### If you have an issue, you can delete the access key and recreate showing the full output:
-```bash
-aws iam list-access-keys --user-name velero
-aws iam delete-access-keys --access-key-id <ACCESS KEY ID> --user-name velero
-aws iam create-access-key --user-name velero
-```
-#### Example output
-```
-{
-  "AccessKey": {
-        "UserName": "velero",
-        "Status": "Active",
-        "CreateDate": "2017-07-31T22:24:41.576Z",
-        "SecretAccessKey": <AWS_SECRET_ACCESS_KEY>,
-        "AccessKeyId": <AWS_ACCESS_KEY_ID>
-  }
-}
-```
-
-### Create a credentials-velero file: 
-```bash
-cat << EOF > ./credentials-velero
-[default]
-aws_access_key_id=$AWS_ACCESS_KEY_ID
-aws_secret_access_key=$AWS_SECRET_ACCESS_KEY
-EOF
-# Optional: backup credentials file in lab environment
-cp credentials-velero credentials-velero.backup
-```
-
+# Option 1: AWS (non-STS)
+## Configure storage
+### see configure_storage_aws_non-sts.md
 ## ACTIVE CLUSTER
-## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
+### Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
@@ -249,7 +75,7 @@ done
 echo "OK to proceed"
 ```
 
-## Enable restore of imported managed clusters
+### Enable restore of imported managed clusters
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
@@ -257,13 +83,13 @@ oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overri
 oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 ```
 
-## Create a Secret with the default name:
+### Create a Secret with the default name:
 ```bash
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
 
-## Create DataProtectionApplication CR
-### Change name in dpa.yaml to bucket specified above
+### Create DataProtectionApplication CR
+#### Change name in dpa.yaml to bucket specified above
 ```bash
 oc create -f acm-dr/dpa.yaml
 # Wait until complete
@@ -290,11 +116,11 @@ done
 echo "OK to proceed"
 ```
 
-### Verify success
+#### Verify success
 ```bash
 oc get all -n open-cluster-management-backup
 ```
-### Output should be similar
+#### Output should be similar
 ```
 [rosa@bastion acm-acs]$ oc get pods -n open-cluster-management-backup
 NAME                                                 READY   STATUS    RESTARTS   AGE
@@ -332,8 +158,8 @@ replicaset.apps/velero-759f578c65                              1         1      
 ```
 
 # PASSIVE CLUSTER
-## Repeat steps above for installing oadp using same secret
-## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
+### Repeat steps above for installing oadp using same secret
+### Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
@@ -361,7 +187,7 @@ do
 done
 echo "OK to proceed"
 ```
-## Enable managedserviceaccount-preview
+### Enable managedserviceaccount-preview
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
@@ -370,14 +196,14 @@ oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.com
 
 ```
 
-## Create a Secret with the default name
-### Note: you will need to create the same file that was created above
+### Create a Secret with the default name
+#### Note: you will need to create the same file that was created above
 ```bash
 oc create secret generic cloud-credentials -n open-cluster-management-backup --from-file cloud=credentials-velero
 ```
 
-## Create DataProtectionApplication CR
-### Change name in dpa.yaml to bucket specified above
+### Create DataProtectionApplication CR
+#### Change name in dpa.yaml to bucket specified above
 ```bash
 oc create -f acm-dr/dpa.yaml
 # Wait until complete
@@ -404,160 +230,18 @@ done
 echo "OK to proceed"
 ```
 
-### Verify success
+#### Verify success
 ```bash
 oc get all -n open-cluster-management-backup
 ```
 
-### Verify ACM policy was created and it compliant
+#### Verify ACM policy was created and it compliant
 ```bash
 oc get policy -n open-cluster-management-backup
 ```
 
-##   Prepare AWS and OCP resources using STS (Option 2)
-### NOTE: this includes a configuration that works for CSI and non-CSI drivers. For CSI specific configuration, see the documentation.
-#### Set variables
-```bash
-export ENV=prod # Substitute environment name - this is optional but is used for naming the S3 bucket and a few other resources below
-echo $ENV
-export CLUSTER_NAME=$(oc cluster-info | grep "running at" | awk -F. '{print $2}')
-#export CLUSTER_NAME=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .name)
-echo $CLUSTER_NAME
-# ROSA_CLUSTER_ID is only required if you want to include in AWS tags
-export ROSA_CLUSTER_ID=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .id)
-echo $ROSA_CLUSTER_ID
-export REGION=$(rosa describe cluster -c ${CLUSTER_NAME} --output json | jq -r .region.id)
-echo $REGION
-# Set S3_REGION to same as active hub. Passive hub will use the same value, not its own region.
-#export S3_REGION=us-east-2
-echo $S3_REGION
-
-
-# The next command results in null if the ROSA cluster is not STS?
-# Check if it is STS
-oc get authentication.config.openshift.io cluster -o json | jq .spec.serviceAccountIssuer
-# Sample output
-# "https://rh-oidc.s3.us-east-1.amazonaws.com/256i475s1nnuaobmhd8hobotj7c6ufpb"
-
-export OIDC_ENDPOINT=$(oc get authentication.config.openshift.io cluster -o jsonpath='{.spec.serviceAccountIssuer}' | sed 's|^https://||')
-echo $OIDC_ENDPOINT
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-echo $AWS_ACCOUNT_ID
-# CLUSTER_VERSION is only required if you want to include in AWS tags
-export CLUSTER_VERSION=$(rosa describe cluster -c ${CLUSTER_NAME} -o json | jq -r .version.raw_id | cut -f -2 -d '.')
-echo $CLUSTER_VERSION
-export ROLE_NAME="${CLUSTER_NAME}-openshift-oadp-aws-cloud-credentials"
-echo $ROLE_NAME
-export SCRATCH="/tmp/${CLUSTER_NAME}/oadp"
-echo $SCRATCH
-mkdir -p ${SCRATCH}
-echo "Cluster ID: ${ROSA_CLUSTER_ID}, Region: ${REGION}, S3 Region: ${S3_REGION}, OIDC Endpoint:
-${OIDC_ENDPOINT}, AWS Account ID: ${AWS_ACCOUNT_ID}"
-
-```
-
-#### Prepare AWS IAM resources
-```bash
-# Create an IAM Policy to allow for S3 Access
-POLICY_ARN=$(aws iam list-policies --query "Policies[?PolicyName=='RosaOadpVer1'].{ARN:Arn}" --output text)
-if [[ -z "${POLICY_ARN}" ]]; then
-cat << EOF > ${SCRATCH}/policy.json
-{
-"Version": "2012-10-17",
-"Statement": [
-  {
-    "Effect": "Allow",
-    "Action": [
-      "s3:CreateBucket",
-      "s3:DeleteBucket",
-      "s3:PutBucketTagging",
-      "s3:GetBucketTagging",
-      "s3:PutEncryptionConfiguration",
-      "s3:GetEncryptionConfiguration",
-      "s3:PutLifecycleConfiguration",
-      "s3:GetLifecycleConfiguration",
-      "s3:GetBucketLocation",
-      "s3:ListBucket",
-      "s3:GetObject",
-      "s3:PutObject",
-      "s3:DeleteObject",
-      "s3:ListBucketMultipartUploads",
-      "s3:AbortMultipartUploads",
-      "s3:ListMultipartUploadParts",
-      "s3:DescribeSnapshots",
-      "ec2:DescribeVolumes",
-      "ec2:DescribeVolumeAttribute",
-      "ec2:DescribeVolumesModifications",
-      "ec2:DescribeVolumeStatus",
-      "ec2:CreateTags",
-      "ec2:CreateVolume",
-      "ec2:CreateSnapshot",
-      "ec2:DeleteSnapshot"
-    ],
-    "Resource": "*"
-  }
- ]}
-EOF
-  # This requires AWS CLI 2.x
-  # Note: for RHACM, the namespace is open-cluster-management-backup, not the default openshift-oadp
-
-# NOTE: The documentation specifies tags. I tested without them and they are not required.
-#POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
-#--policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
-#--tags Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,Value=open-cluster-management-backup Key=operator_name,#Value=openshift-oadp \
-#--output text)
-
-# Without the tags
-POLICY_ARN=$(aws iam create-policy --policy-name "RosaOadpVer1" \
---policy-document file:///${SCRATCH}/policy.json --query Policy.Arn \
---output text)
-
-fi
-
-echo $POLICY_ARN
-
-# Create an IAM Role trust policy for the cluster - adjusted for open-cluster-management-backup namespace
-cat <<EOF > ${SCRATCH}/trust-policy.json
-{
-   "Version": "2012-10-17",
-   "Statement": [{
-     "Effect": "Allow",
-     "Principal": {
-       "Federated": "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/${OIDC_ENDPOINT}"
-     },
-     "Action": "sts:AssumeRoleWithWebIdentity",
-     "Condition": {
-       "StringEquals": {
-          "${OIDC_ENDPOINT}:sub": [
-            "system:serviceaccount:open-cluster-management-backup:openshift-adp-controller-manager",
-            "system:serviceaccount:open-cluster-management-backup:velero"]
-       }
-     }
-   }]
-}
-EOF
-
-cat ${SCRATCH}/trust-policy.json
-
-# NOTE: For RHACM, the namespace is not default openshift-oadp, but is open-cluster-management-backup instead and operator name is redhat-oadp-operator
-# NOTE: The documentation specifies tags. I tested without them and they are not required.
-#ROLE_ARN=$(aws iam create-role --role-name \
-#  "${ROLE_NAME}" \
-#   --assume-role-policy-document file://${SCRATCH}/trust-policy.json \
-#   --tags Key=rosa_cluster_id,Value=${ROSA_CLUSTER_ID} Key=rosa_openshift_version,Value=${CLUSTER_VERSION} Key=rosa_role_prefix,Value=ManagedOpenShift Key=operator_namespace,#Value=open-cluster-management-backup Key=operator_name,Value=redhat-oadp-operator \
-#   --query Role.Arn --output text)
-
-# Without the tags
-ROLE_ARN=$(aws iam create-role --role-name \
-  "${ROLE_NAME}" \
-   --assume-role-policy-document file://${SCRATCH}/trust-policy.json \
-   --query Role.Arn --output text)
-
-echo ${ROLE_ARN}
-
-# Attach the IAM Policy to the IAM Role
-aws iam attach-role-policy --role-name "${ROLE_NAME}" --policy-arn ${POLICY_ARN}
-```
+#  Option 2: AWS STS
+### see configure_storage_aws_sts.md
 
 ### Prepare Hub Cluster
 ```bash
@@ -694,56 +378,10 @@ oc get sc
 oc get backup -n open-cluster-management-backup
 ```
 
-# Option 3: Azure connections
-## Login to Azure
-```bash
-az login
-```
-## Create Azure resources
-### Create resource group
-```bash
-AZURE_RESOURCE_GROUP=Velero_Backups
-AZURE_LOCATION=CentralUS
-az group create -n $AZURE_RESOURCE_GROUP --location $AZURE_LOCATION
-```
-### Create storage account and container
-```bash
-AZURE_STORAGE_ACCOUNT_ID="velero$(uuidgen | cut -d '-' -f5 | tr '[A-Z]' '[a-z]')"
-BLOB_CONTAINER=velero
-az storage account create --name $AZURE_STORAGE_ACCOUNT_ID --resource-group $AZURE_RESOURCE_GROUP --sku Standard_GRS --encryption-services blob --https-only true --kind BlobStorage --access-tier Hot
-az storage container create -n $BLOB_CONTAINER --public-access off --account-name $AZURE_STORAGE_ACCOUNT_ID
-```
-### Obtain storage account access key, custom role, and credentials file
-```bash
-AZURE_STORAGE_ACCOUNT_ACCESS_KEY=`az storage account keys list --account-name $AZURE_STORAGE_ACCOUNT_ID --query "[?keyName == 'key1'].value" -o tsv`
-AZURE_ROLE=Velero
-az role definition create --role-definition '{
-   "Name": "'$AZURE_ROLE'",
-   "Description": "Velero related permissions to perform backups, restores and deletions",
-   "Actions": [
-       "Microsoft.Compute/disks/read",
-       "Microsoft.Compute/disks/write",
-       "Microsoft.Compute/disks/endGetAccess/action",
-       "Microsoft.Compute/disks/beginGetAccess/action",
-       "Microsoft.Compute/snapshots/read",
-       "Microsoft.Compute/snapshots/write",
-       "Microsoft.Compute/snapshots/delete",
-       "Microsoft.Storage/storageAccounts/listkeys/action",
-       "Microsoft.Storage/storageAccounts/regeneratekey/action"
-   ],
-   "AssignableScopes": ["/subscriptions/'$AZURE_SUBSCRIPTION_ID'"]
-   }'
+# Option 3: Azure
+### Prepare storage
+#### see configure_storage_azure.md
 
-cat << EOF > ./credentials-velero
-AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
-AZURE_TENANT_ID=${AZURE_TENANT_ID}
-AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
-AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
-AZURE_RESOURCE_GROUP=${AZURE_RESOURCE_GROUP}
-AZURE_STORAGE_ACCOUNT_ACCESS_KEY=${AZURE_STORAGE_ACCOUNT_ACCESS_KEY} 
-AZURE_CLOUD_NAME=AzurePublicCloud
-EOF
-```
 ## ACTIVE CLUSTER
 ## Install OADP Operator # It will be installed when setting cluster-backup: true in the mch
 ```bash
