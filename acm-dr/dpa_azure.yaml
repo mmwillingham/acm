@@ -1,0 +1,39 @@
+apiVersion: oadp.openshift.io/v1alpha1
+kind: DataProtectionApplication
+metadata:
+  name: <dpa_sample>
+  namespace: openshift-adp
+spec:
+  configuration:
+    velero:
+      defaultPlugins:
+        - azure
+        - openshift 
+      resourceTimeout: 10m 
+    restic:
+      enable: true 
+      podConfig:
+        nodeSelector: <node_selector> 
+  backupLocations:
+    - velero:
+        config:
+          resourceGroup: <azure_resource_group> 
+          storageAccount: <azure_storage_account_id> 
+          subscriptionId: <azure_subscription_id> 
+          storageAccountKeyEnvVar: AZURE_STORAGE_ACCOUNT_ACCESS_KEY
+        credential:
+          key: cloud
+          name: cloud-credentials-azure  
+        provider: azure
+        default: true
+        objectStorage:
+          bucket: <bucket_name> 
+          prefix: <prefix> 
+  snapshotLocations: 
+    - velero:
+        config:
+          resourceGroup: <azure_resource_group>
+          subscriptionId: <azure_subscription_id>
+          incremental: "true"
+        name: default
+        provider: azure
