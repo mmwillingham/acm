@@ -17,23 +17,23 @@ spec:
   backupLocations:
     - velero:
         config:
-          resourceGroup: <azure_resource_group> 
-          storageAccount: <azure_storage_account_id> 
-          subscriptionId: <azure_subscription_id> 
-          storageAccountKeyEnvVar: AZURE_STORAGE_ACCOUNT_ACCESS_KEY
+          resourceGroup: <AZURE_RESOURCE_GROUP>
+          storageAccount: <AZURE_STORAGE_ACCOUNT_ID> 
+          subscriptionId: <AZURE_SUBSCRIPTION_ID> 
+          storageAccountKeyEnvVar: <AZURE_STORAGE_ACCOUNT_ACCESS_KEY>
         credential:
           key: cloud
           name: cloud-credentials-azure  
         provider: azure
         default: true
         objectStorage:
-          bucket: <bucket_name> 
-          prefix: <prefix> 
+          bucket: <bucket_name> # Specify a bucket as the backup storage location. If the bucket is not a dedicated bucket for Velero backups, you must specify a prefix.
+          prefix: velero # Specify a prefix for Velero backups, for example, velero, if the bucket is used for multiple purposes.
   snapshotLocations: 
     - velero:
         config:
-          resourceGroup: <azure_resource_group>
-          subscriptionId: <azure_subscription_id>
+          resourceGroup: <AZURE_RESOURCE_GROUP>
+          subscriptionId: <AZURE_SUBSCRIPTION_ID> 
           incremental: "true"
         name: default
         provider: azure
