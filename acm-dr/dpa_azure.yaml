@@ -1,8 +1,8 @@
 apiVersion: oadp.openshift.io/v1alpha1
 kind: DataProtectionApplication
 metadata:
-  name: <dpa_sample>
-  namespace: openshift-adp
+  name: velero
+  namespace: open-cluster-management-backup
 spec:
   configuration:
     velero:
@@ -12,8 +12,8 @@ spec:
       resourceTimeout: 10m 
     restic:
       enable: true 
-      podConfig:
-        nodeSelector: <node_selector> 
+#      podConfig:
+#        nodeSelector: <node_selector> 
   backupLocations:
     - velero:
         config:
