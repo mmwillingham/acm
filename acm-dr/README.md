@@ -788,9 +788,9 @@ oc create secret generic cloud-credentials-azure -n openshift-adp --from-file cl
 ```
 
 ## Create DataProtectionApplication CR
-### Change name in dpa.yaml to bucket specified above
+### IMPORTANT: Change values in dpa.yaml to use details obtained above
 ```bash
-oc create -f acm-dr/dpa.yaml
+oc create -f acm-dr/dpa_azure.yaml
 # Wait until complete
 echo "Waiting until complete..."
 output() {
