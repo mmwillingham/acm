@@ -55,9 +55,9 @@ oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management
 
 ### Enable restore of imported managed clusters
 ```bash
-oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# ACM 2.8 and older: oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount","enabled":true}]}}}'
 # Verify it is set to true
-#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
 oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 ```
 
@@ -77,42 +77,7 @@ oc create -f acm-dr/dpa.yaml
 #### Verify success
 ```bash
 oc get all -n open-cluster-management-backup
-```
-#### Output should be similar
-```
-[rosa@bastion acm-acs]$ oc get pods -n open-cluster-management-backup
-NAME                                                 READY   STATUS    RESTARTS   AGE
-cluster-backup-chart-clusterbackup-5f7568884-k82sz   1/1     Running   0          90m
-cluster-backup-chart-clusterbackup-5f7568884-ssltg   1/1     Running   0          90m
-openshift-adp-controller-manager-544985898c-hksk6    1/1     Running   0          89m
-restic-gwxs9                                         1/1     Running   0          3m2s
-restic-pwfs7                                         1/1     Running   0          3m2s
-velero-759f578c65-nmj2z                              1/1     Running   0          3m2s
-[rosa@bastion acm-acs]$ oc get all -n open-cluster-management-backup
-NAME                                                     READY   STATUS    RESTARTS   AGE
-pod/cluster-backup-chart-clusterbackup-5f7568884-k82sz   1/1     Running   0          90m
-pod/cluster-backup-chart-clusterbackup-5f7568884-ssltg   1/1     Running   0          90m
-pod/openshift-adp-controller-manager-544985898c-hksk6    1/1     Running   0          89m
-pod/restic-gwxs9                                         1/1     Running   0          3m13s
-pod/restic-pwfs7                                         1/1     Running   0          3m13s
-pod/velero-759f578c65-nmj2z                              1/1     Running   0          3m13s
-
-NAME                                                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
-service/openshift-adp-controller-manager-metrics-service   ClusterIP   172.30.67.227    <none>        8443/TCP   90m
-service/openshift-adp-velero-metrics-svc                   ClusterIP   172.30.137.151   <none>        8085/TCP   3m13s
-
-NAME                    DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
-daemonset.apps/restic   2         2         2       2            2           <none>          3m13s
-
-NAME                                                 READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/cluster-backup-chart-clusterbackup   2/2     2            2           90m
-deployment.apps/openshift-adp-controller-manager     1/1     1            1           89m
-deployment.apps/velero                               1/1     1            1           3m13s
-
-NAME                                                           DESIRED   CURRENT   READY   AGE
-replicaset.apps/cluster-backup-chart-clusterbackup-5f7568884   2         2         2       90m
-replicaset.apps/openshift-adp-controller-manager-544985898c    1         1         1       89m
-replicaset.apps/velero-759f578c65                              1         1         1       3m13s
+oc get pods -n open-cluster-management-backup
 ```
 
 # PASSIVE CLUSTER
@@ -125,9 +90,9 @@ oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management
 ```
 ### Enable managedserviceaccount-preview
 ```bash
-oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# ACM 2.8 and older: oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount","enabled":true}]}}}'
 # Verify it is set to true
-#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
 oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 
 ```
@@ -155,6 +120,8 @@ oc get all -n open-cluster-management-backup
 ```bash
 oc get policy -n open-cluster-management-backup
 ```
+# Proceed to "Backup and Restore" section below.
+
 
 #  Option 2: AWS STS
 ### see configure_storage_aws_sts.md
@@ -173,7 +140,6 @@ cat ${SCRATCH}/credentials
 # Create secret
 oc create namespace open-cluster-management-backup
 oc -n open-cluster-management-backup create secret generic cloud-credentials --from-file=${SCRATCH}/credentials
-
 oc get -n open-cluster-management-backup secret cloud-credentials
 ```
 
@@ -183,13 +149,11 @@ oc get -n open-cluster-management-backup secret cloud-credentials
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
 oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
-# NOTE: The script will initially say "error: Required resources not specified", but will eventually appear
 ```
 ## Enable managedserviceaccount-preview
 ```bash
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
 # Verify it is set to true
-#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
 oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 ```
 
@@ -272,6 +236,8 @@ oc get sc
 # When complete, check if backups are available (this will verify connectivity to backups in S3 created by active hub)
 oc get backup -n open-cluster-management-backup
 ```
+# Proceed to "Backup and Restore" section below.
+
 
 # Option 3: Azure
 ### Prepare storage
@@ -287,9 +253,9 @@ oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management
 
 ## Enable restore of imported managed clusters
 ```bash
-oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+# ACM 2.8 and older: oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount","enabled":true}]}}}'
 # Verify it is set to true
-#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
 oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
 ```
 
@@ -309,42 +275,7 @@ oc get dpa -n open-cluster-management-backup velero -ojson | jq '.status.conditi
 ### Verify success
 ```bash
 oc get all -n open-cluster-management-backup
-```
-### Output should be similar
-```
-[rosa@bastion acm-acs]$ oc get pods -n open-cluster-management-backup
-NAME                                                 READY   STATUS    RESTARTS   AGE
-cluster-backup-chart-clusterbackup-5f7568884-k82sz   1/1     Running   0          90m
-cluster-backup-chart-clusterbackup-5f7568884-ssltg   1/1     Running   0          90m
-openshift-adp-controller-manager-544985898c-hksk6    1/1     Running   0          89m
-restic-gwxs9                                         1/1     Running   0          3m2s
-restic-pwfs7                                         1/1     Running   0          3m2s
-velero-759f578c65-nmj2z                              1/1     Running   0          3m2s
-[rosa@bastion acm-acs]$ oc get all -n open-cluster-management-backup
-NAME                                                     READY   STATUS    RESTARTS   AGE
-pod/cluster-backup-chart-clusterbackup-5f7568884-k82sz   1/1     Running   0          90m
-pod/cluster-backup-chart-clusterbackup-5f7568884-ssltg   1/1     Running   0          90m
-pod/openshift-adp-controller-manager-544985898c-hksk6    1/1     Running   0          89m
-pod/restic-gwxs9                                         1/1     Running   0          3m13s
-pod/restic-pwfs7                                         1/1     Running   0          3m13s
-pod/velero-759f578c65-nmj2z                              1/1     Running   0          3m13s
-
-NAME                                                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
-service/openshift-adp-controller-manager-metrics-service   ClusterIP   172.30.67.227    <none>        8443/TCP   90m
-service/openshift-adp-velero-metrics-svc                   ClusterIP   172.30.137.151   <none>        8085/TCP   3m13s
-
-NAME                    DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
-daemonset.apps/restic   2         2         2       2            2           <none>          3m13s
-
-NAME                                                 READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/cluster-backup-chart-clusterbackup   2/2     2            2           90m
-deployment.apps/openshift-adp-controller-manager     1/1     1            1           89m
-deployment.apps/velero                               1/1     1            1           3m13s
-
-NAME                                                           DESIRED   CURRENT   READY   AGE
-replicaset.apps/cluster-backup-chart-clusterbackup-5f7568884   2         2         2       90m
-replicaset.apps/openshift-adp-controller-manager-544985898c    1         1         1       89m
-replicaset.apps/velero-759f578c65                              1         1         1       3m13s
+oc get pods -n open-cluster-management-backup
 ```
 
 # PASSIVE CLUSTER
@@ -353,15 +284,14 @@ replicaset.apps/velero-759f578c65                              1         1      
 ```bash
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":true}}]'
 # Wait until succeeded
-    oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
+oc get -n open-cluster-management-backup $(oc get csv -n open-cluster-management-backup -o name | grep oadp) -ojson | jq -r [.status.phase] |jq -r '.[]'
 ```
 ## Enable managedserviceaccount-preview
 ```bash
-oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+#ACM 2.8 and older: oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":true}]}}}'
+oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount","enabled":true}]}}}'
 # Verify it is set to true
-#oc get multiclusterengine multiclusterengine -oyaml |grep managedserviceaccount-preview -A1 | tail -1 | awk '{print $3}'
 oc get multiclusterengine multiclusterengine -ojson | jq -r '.spec.overrides.components[] | select(.name == "console-mce")' | jq .enabled
-
 ```
 
 ## Create a Secret with the default name
@@ -387,8 +317,7 @@ oc get all -n open-cluster-management-backup
 ```bash
 oc get policy -n open-cluster-management-backup
 ```
-
-# end Azure
+# Proceed to "Backup and Restore" section below.
 
 # Backup and Restore
 ## Schedule a backup on active cluster
@@ -480,24 +409,7 @@ oc get managedclustersets -n open-cluster-management
 oc apply -f acm-dr/cluster_v1beta1_restore_passive_sync.yaml
 
 # Check if complete
-restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
-echo $restore_status
-expected_condition="Enabled"
-timeout="300"
-i=1
-until [ "$restore_status" = "$expected_condition" ]
-do
-  ((i++))
-  restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
-  echo $restore_status
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 3
-done
-echo "Restore Complete"
+oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase
 ```
 
 ### View restore events
@@ -531,24 +443,7 @@ done
 oc apply -f acm-dr/cluster_v1beta1_restore_passive_activate.yaml
 
 # Check if complete
-restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
-echo $restore_status
-expected_condition="Finished"
-timeout="300"
-i=1
-until [ "$restore_status" = "$expected_condition" ]
-do
-  ((i++))
-  restore_status=$(oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase)
-  echo $restore_status
-  if [ "${i}" -gt "${timeout}" ]; then
-      echo "Sorry it took too long"
-      exit 1
-  fi
-
-  sleep 5
-done
-echo "Restore Complete"
+oc get -n open-cluster-management-backup $(oc get restore -n open-cluster-management-backup -o name | tail -1) -ojson | jq -r .status.phase
 
 ```
 ### Verify managed clusters were imported
