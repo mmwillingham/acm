@@ -317,7 +317,7 @@ oc get all -n open-cluster-management-backup
 ```bash
 oc get policy -n open-cluster-management-backup
 ```
-# Proceed to "Backup and Restore" section below.
+## Proceed to "Backup and Restore" section below.
 
 # Backup and Restore
 ## Schedule a backup on active cluster

@@ -24,11 +24,12 @@ oc delete secret cloud-credentials -n open-cluster-management-backup
 oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount","enabled":false}]}}}'
 # ACM 2.8 and older: oc patch multiclusterengine multiclusterengine --type=merge -p '{"spec":{"overrides":{"components":[{"name":"managedserviceaccount-preview","enabled":false}]}}}'
 
-# Disable OADP (optional)
+# Delete OADP (optional)
 oc patch MultiClusterHub multiclusterhub -n open-cluster-management --type=json -p='[{"op": "add", "path": "/spec/overrides/components/-","value":{"name":"cluster-backup","enabled":false}}]'
+```
 
 # Cloud specific steps
-
+```bash
 # AWS non-STS
 # Delete credentials file
 rm ./credentials-velero
@@ -54,3 +55,4 @@ aws s3api delete-bucket --bucket $BUCKET
 # AWS STS
 
 # Azure
+

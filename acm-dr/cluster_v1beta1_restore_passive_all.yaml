@@ -4,6 +4,8 @@
 # CleanupRestored - clean up resources created by a previous acm restore and not part of the currently restored backup
 # None : don't clean up anything, just apply the restore
 
+
+
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Restore
 metadata:
@@ -16,3 +18,4 @@ spec:
   veleroManagedClustersBackupName: latest
   veleroCredentialsBackupName: latest
   veleroResourcesBackupName: latest
+

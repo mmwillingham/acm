@@ -2,7 +2,7 @@
 ## Create AWS S3 bucket and access to it
 ### Set the BUCKET variable:
 ```bash
-BUCKET=rhacm-dr-test-mmw
+BUCKET=rhacm-dr-test-xyz
 # Specify same name in dpa.yaml
 ```
 ### Set the REGION variable:
@@ -14,7 +14,7 @@ REGION=us-east-2
 ```bash
 aws s3api create-bucket --bucket $BUCKET --region $REGION --create-bucket-configuration LocationConstraint=$REGION
 # Verify
-aws s3api list-buckets
+aws s3api list-buckets --query "Buckets[].Name" | grep $BUCKET
 ```
 ### Create IAM user:
 ```bash
@@ -91,18 +91,6 @@ aws iam list-access-keys --user-name velero
 aws iam list-access-keys --user-name velero
 aws iam delete-access-key --access-key-id <ACCESS KEY ID> --user-name velero
 aws iam create-access-key --user-name velero
-```
-#### Example output
-```
-{
-  "AccessKey": {
-        "UserName": "velero",
-        "Status": "Active",
-        "CreateDate": "2017-07-31T22:24:41.576Z",
-        "SecretAccessKey": <AWS_SECRET_ACCESS_KEY>,
-        "AccessKeyId": <AWS_ACCESS_KEY_ID>
-  }
-}
 ```
 
 ### Create a credentials-velero file: 
