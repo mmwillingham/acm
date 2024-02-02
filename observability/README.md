@@ -23,7 +23,7 @@ oc create namespace open-cluster-management-observability
 ```
 
 ### Generate pull-secret
-#### Check if secret already exists (it will probaly not already exist)
+#### Check if secret already exists (it will probably not already exist)
 ```bash
 oc get secret multiclusterhub-operator-pull-secret -n open-cluster-management-observability
 ```
@@ -44,16 +44,12 @@ oc create secret generic multiclusterhub-operator-pull-secret \
 #### Create thanos-object-storage.yaml based on your cloud provider
 ##### Example for AWS (non-STS)
 ```bash
-BUCKET=acm-bucket-mmw
+BUCKET=acm-observability-demo
 REGION=us-east-2
 AWS_ACCESS_KEY_ID=(redacted)
 AWS_SECRET_ACCESS_KEY=(redacted)
 
 aws s3api create-bucket --bucket $BUCKET --region $REGION --create-bucket-configuration LocationConstraint=$REGION
-{
-    "Location": "http://acm-bucket-mmw.s3.amazonaws.com/"
-}
-
 S3_ENDPOINT=s3.amazonaws.com
 
 cat << EOF > thanos-object-storage.yaml
@@ -67,7 +63,7 @@ stringData:
   thanos.yaml: |
     type: s3
     config:
-      bucket: acm-bucket-mmw
+      bucket: acm-observability-demo
       endpoint: s3.amazonaws.com
       insecure: true
       access_key: (redacted)
